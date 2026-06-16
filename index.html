@@ -855,24 +855,59 @@ window.setv=(path,val,isNum)=>{
   }
 };
 
-/* setv + recompute/re-render of the dependent outputs, with focus + caret + raw-text preservation
- * for the field being edited. This is the binding that makes EVERY numeric input drive the results
- * live (the original numField wired oninput->setv but never re-rendered, so the panel showed stale
- * defaults — the reported bug). render() rebuilds #app wholesale, which would steal focus and could
- * normalize a half-typed value ("0." -> "0"); we re-focus by stable data-path and restore the raw
- * text + caret so typing decimals like 0.05 / 0.0425 is uninterrupted. */
+/* CARET-JUMP FIX (root cause): the previous live-recompute fix made every numeric `oninput`
+ * call render(), which rebuilt #app wholesale — DESTROYING and recreating the very <input> the
+ * user was typing in. For type=number, selectionStart/selectionEnd read back as null and
+ * setSelectionRange THROWS (swallowed by the old try/catch), so focus landed with the caret at
+ * position 0. The next character then inserted at the FRONT, reversing input ("52" -> "25").
+ *
+ * The fix decouples "recompute outputs" from "rebuild the form". On a LIVE numeric edit we
+ * recompute and re-render the panel into an OFFSCREEN tree, then TRANSPLANT the existing live
+ * <input>/<select> DOM nodes (matched by stable data-path) from the current panel into the new
+ * tree before mounting. The focused field is therefore the SAME DOM node it always was — its
+ * value, focus, and caret are never touched by the framework, so the browser's native caret
+ * behavior just works and there is nothing to "restore". Only the OUTPUT nodes around the inputs
+ * are replaced. Full structural render() (which DOES recreate inputs) is reserved for navigation
+ * and toggles that change WHICH inputs are shown — never fired mid-typing. */
+
+/* Build the current step's panel markup (pure string; no DOM side effects). */
+function panelHTML(){
+  const r = computeConversion(CONFIG_2026, STATE.inp);
+  const fns={0:stepIntro,1:stepAbout,2:stepIncome,3:stepBalances,4:stepConversion,5:stepCost,6:stepShould,7:stepMulti,8:stepSummary};
+  return `<div class="panel">${fns[STATE.step](r)}</div>${nav()}`;
+}
+
+/* Live-edit re-render: recompute outputs WITHOUT recreating the input the user is editing.
+ * Re-renders the panel offscreen, then moves the still-live form controls (by data-path) from
+ * the current #app into the freshly built tree, so their DOM identity / focus / caret survive. */
+function renderLive(){
+  renderSteps();
+  const app=$("#app");
+  // map of currently-live form controls by their stable data-path
+  const liveControls=new Map();
+  app.querySelectorAll('[data-path]').forEach(node=>{
+    const p=node.getAttribute('data-path');
+    if(p && !liveControls.has(p)) liveControls.set(p, node);
+  });
+  // build the new panel offscreen
+  const next=document.createElement('div');
+  next.innerHTML=panelHTML();
+  // for every control in the new tree that we already have a live node for, swap the live node in
+  next.querySelectorAll('[data-path]').forEach(placeholder=>{
+    const p=placeholder.getAttribute('data-path');
+    const live=liveControls.get(p);
+    if(live){ placeholder.replaceWith(live); liveControls.delete(p); }
+  });
+  // mount: move the (now input-preserving) children into #app in place of the old contents
+  app.replaceChildren(...next.childNodes);
+}
+
+/* setv + LIVE recompute for numeric fields. Updates STATE, then refreshes the OUTPUT region
+ * only — the focused <input> is preserved as the same DOM node (see renderLive), so the caret is
+ * never disturbed. No focus/selection restoration hack is needed or wanted on this path. */
 window.setvr=(path,el,isNum)=>{
-  const raw=el.value;
-  const selStart=el.selectionStart, selEnd=el.selectionEnd;
-  setv(path,raw,isNum);
-  render();
-  const again=document.querySelector('input[data-path="'+path+'"]');
-  if(again){
-    // restore the user's in-progress raw text so partial entries (e.g. "0.") aren't clobbered
-    if(again.value!==raw) again.value=raw;
-    again.focus();
-    try{ again.setSelectionRange(selStart,selEnd); }catch(e){/* number inputs may reject setSelectionRange in some engines */}
-  }
+  setv(path, el.value, isNum);
+  renderLive();
 };
 function numField(label,path,tip){
   const v=path.split('.').reduce((o,k)=>o[k],STATE.inp);
@@ -880,11 +915,13 @@ function numField(label,path,tip){
     <input type="number" step="any" data-path="${path}" value="${v}" oninput="setvr('${path}',this,true)"></div>`;
 }
 
+/* Full structural render: rebuilds the entire step including all input controls. Used ONLY for
+ * navigation and toggles that change which inputs are shown (filing status, mode radios, the
+ * Medicare/ACA/OBBBA checkboxes, payTaxFrom). Safe because the user is not mid-typing in a text
+ * field when these fire. */
 function render(){
   renderSteps();
-  const r = computeConversion(CONFIG_2026, STATE.inp);
-  const fns={0:stepIntro,1:stepAbout,2:stepIncome,3:stepBalances,4:stepConversion,5:stepCost,6:stepShould,7:stepMulti,8:stepSummary};
-  $("#app").innerHTML = `<div class="panel">${fns[STATE.step](r)}</div>${nav()}`;
+  $("#app").innerHTML = panelHTML();
 }
 
 /* ---- Step 0 ---- */
@@ -1235,6 +1272,50 @@ function runDomInteractivityTests(){
     setField('projection.growthRate','0.06');
     const shown=document.querySelector('input[data-path="projection.growthRate"]').value;
     ok("displayed growth field equals the value the engine used (no divergence)", parseFloat(shown)===STATE.inp.projection.growthRate, "field="+shown+" state="+STATE.inp.projection.growthRate);
+
+    // ---- CARET / SEQUENCE REGRESSION GUARD (the caret-jump / reversed-typing bug) ----
+    // Simulate REAL character-by-character typing through the browser's native editing pipeline
+    // (execCommand('insertText') fires beforeinput/input and maintains the type=number bad-input
+    // buffer for a trailing '.', exactly like a physical keystroke — unlike a raw .value assignment,
+    // which a number input refuses to store mid-decimal). The original bug recreated the focused
+    // <input> on every keystroke, so focus landed with the caret at position 0 and the next char
+    // inserted at the FRONT, reversing the input ("52" -> "25"). We assert, per field: (a) the
+    // resulting value is in TYPED ORDER, and (b) the input DOM node is NOT recreated between
+    // keystrokes (proven by tagging the node and confirming the tag survives every keystroke).
+    const nativeTypeSeq=(path, str)=>{
+      let el=document.querySelector('input[data-path="'+path+'"]');
+      if(!el) return {value:null, recreated:true};
+      el.focus(); el.select();
+      try{ document.execCommand('delete'); }catch(e){ el.value=''; el.dispatchEvent(new Event('input',{bubbles:true})); }
+      el=document.querySelector('input[data-path="'+path+'"]');
+      el.__seqTag='SAME-NODE';                              // tag to detect recreation
+      let recreated=false;
+      for(const ch of str){
+        const cur=document.querySelector('input[data-path="'+path+'"]');
+        if(cur.__seqTag!=='SAME-NODE') recreated=true;      // node was swapped out -> recreation
+        cur.focus();
+        try{ document.execCommand('insertText', false, ch); }   // native insert at caret
+        catch(e){ cur.value=cur.value+ch; cur.dispatchEvent(new Event('input',{bubbles:true})); }
+      }
+      const fin=document.querySelector('input[data-path="'+path+'"]');
+      if(fin.__seqTag!=='SAME-NODE') recreated=true;
+      return {value:fin.value, recreated};
+    };
+    // multi-digit integer into horizon: "52" must read "52", not "25"
+    const seqInt=nativeTypeSeq('projection.horizonYears','52');
+    ok("CARET: typing '52' char-by-char yields '52' (not reversed '25')", seqInt.value==='52', "got '"+seqInt.value+"'");
+    ok("CARET: input node NOT recreated while typing 'horizon' (live edit preserves the node)", seqInt.recreated===false, "node was recreated mid-typing");
+    setField('projection.horizonYears','20');
+    // decimal into growth rate: "0.05" must read "0.05", not "50.0"/"05"/reversed
+    const seqDec=nativeTypeSeq('projection.growthRate','0.05');
+    ok("CARET: typing '0.05' char-by-char yields '0.05' (decimal not reversed/dropped)", seqDec.value==='0.05', "got '"+seqDec.value+"'");
+    ok("CARET: input node NOT recreated while typing decimal '0.05'", seqDec.recreated===false, "node was recreated mid-typing");
+    setField('projection.growthRate','0.05');
+    // future rate: "0.34" -> "0.34"
+    const seqFut=nativeTypeSeq('projection.expectedFutureMarginalRate','0.34');
+    ok("CARET: typing '0.34' char-by-char yields '0.34' (future rate)", seqFut.value==='0.34', "got '"+seqFut.value+"'");
+    ok("CARET: future-rate node preserved & state recomputed to 0.34 live", seqFut.recreated===false && parseFloat(STATE.inp.projection.expectedFutureMarginalRate)===0.34, "state="+STATE.inp.projection.expectedFutureMarginalRate);
+    setField('projection.expectedFutureMarginalRate','0.24');
   } catch(e){
     fail++; log.push("FAIL  DOM interactivity test threw — "+e.message);
   } finally {
