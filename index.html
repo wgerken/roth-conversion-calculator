@@ -830,16 +830,54 @@ function nav(){
 }
 window.go=d=>{ STATE.step=Math.max(0,Math.min(STEP_TITLES.length-1, STATE.step+d)); render(); };
 
-/* generic input binding by path */
+/* generic input binding by path.
+ * isNum: parse to a Number robustly. A transient/partial entry while the user is mid-type
+ * ("" , "-", ".", "0.", "1e") parses to NaN — DO NOT write NaN into state (it would poison the
+ * whole results panel). Instead leave the prior numeric value in state for the recompute, while the
+ * raw text stays in the field (see setvr's focus/raw-text preservation). When the field is cleared
+ * to empty we commit 0 so a deleted value behaves sensibly rather than freezing the last number. */
 window.setv=(path,val,isNum)=>{
   const parts=path.split('.'); let o=STATE.inp;
   for(let i=0;i<parts.length-1;i++) o=o[parts[i]];
-  o[parts[parts.length-1]] = isNum ? (val===''?0:Number(val)) : val;
+  const key=parts[parts.length-1];
+  if(isNum){
+    // NOTE on type=number inputs: while a user is mid-typing a decimal ("0." before the next digit),
+    // the browser's .value reads back as "" until the entry is a valid number again. So an empty read
+    // here is a transient/cleared state -> commit 0 (the panel shows a 0-growth figure for that instant,
+    // then snaps to the real value on the next keystroke). The field keeps the user's caret/focus via
+    // setvr, so typing is uninterrupted. A non-empty but unparseable value keeps the last good number.
+    if(val===''){ o[key]=0; return; }
+    const n=parseFloat(val);
+    if(!isFinite(n)) return;
+    o[key]=n;
+  } else {
+    o[key]=val;
+  }
+};
+
+/* setv + recompute/re-render of the dependent outputs, with focus + caret + raw-text preservation
+ * for the field being edited. This is the binding that makes EVERY numeric input drive the results
+ * live (the original numField wired oninput->setv but never re-rendered, so the panel showed stale
+ * defaults — the reported bug). render() rebuilds #app wholesale, which would steal focus and could
+ * normalize a half-typed value ("0." -> "0"); we re-focus by stable data-path and restore the raw
+ * text + caret so typing decimals like 0.05 / 0.0425 is uninterrupted. */
+window.setvr=(path,el,isNum)=>{
+  const raw=el.value;
+  const selStart=el.selectionStart, selEnd=el.selectionEnd;
+  setv(path,raw,isNum);
+  render();
+  const again=document.querySelector('input[data-path="'+path+'"]');
+  if(again){
+    // restore the user's in-progress raw text so partial entries (e.g. "0.") aren't clobbered
+    if(again.value!==raw) again.value=raw;
+    again.focus();
+    try{ again.setSelectionRange(selStart,selEnd); }catch(e){/* number inputs may reject setSelectionRange in some engines */}
+  }
 };
 function numField(label,path,tip){
   const v=path.split('.').reduce((o,k)=>o[k],STATE.inp);
   return `<div class="field"><label>${label}${tip?' '+gloss('ⓘ',tip):''}</label>
-    <input type="number" value="${v}" oninput="setv('${path}',this.value,true)"></div>`;
+    <input type="number" step="any" data-path="${path}" value="${v}" oninput="setvr('${path}',this,true)"></div>`;
 }
 
 function render(){
@@ -1144,17 +1182,89 @@ function stepSummary(r){
   </details>`;
 }
 
+/* ============================================================================
+ *  DOM INTERACTIVITY SELF-TEST (regression guard for the live input-binding bug)
+ *  Programmatically drives the REAL UI: navigates to a step, fires a genuine `input`
+ *  event on a field, and asserts the RENDERED output actually changed. The original
+ *  bug (oninput updated STATE but never re-rendered) passed all 38 engine tests because
+ *  they exercised computeConversion() directly in Node — never the DOM wiring. This test
+ *  would have caught it. It saves & restores STATE/step so it never disturbs the user.
+ * ========================================================================== */
+function runDomInteractivityTests(){
+  let pass=0, fail=0; const log=[];
+  const ok=(name,cond,detail)=>{ if(cond){pass++;log.push("PASS  "+name);} else {fail++;log.push("FAIL  "+name+(detail?("  — "+detail):""));} };
+  // snapshot & restore so this is side-effect-free for the user
+  const savedState=JSON.parse(JSON.stringify(STATE.inp)); const savedStep=STATE.step;
+  const parseMoney=s=>Number(String(s).replace(/[^0-9.\-]/g,''))||0;
+  const convertCardValue=()=>{
+    const card=Array.from(document.querySelectorAll('.kpi .card')).find(c=>/Convert\b/.test(c.textContent)&&/after-tax value/.test(c.textContent));
+    return card?parseMoney(card.querySelector('.v').textContent):null;
+  };
+  const setField=(path,val)=>{
+    const el=document.querySelector('input[data-path="'+path+'"]');
+    if(!el) return false;
+    el.value=String(val);
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+    return true;
+  };
+  try{
+    // Land on Step 6 with a known taxable-pays scenario.
+    STATE.step=6; STATE.inp.conversion.payTaxFrom='taxable'; render();
+    const C=computeConversion(CONFIG_2026,STATE.inp).conversionAmount;
+    const n=STATE.inp.projection.horizonYears;
+
+    // 1) growth 0.05 -> 0.07 must RAISE Convert value to ~ C*(1.07)^n (the exact reported bug)
+    setField('projection.growthRate','0.05'); const g05=convertCardValue();
+    setField('projection.growthRate','0.07'); const g07=convertCardValue();
+    const exp07=C*Math.pow(1.07,n);
+    ok("growth 0.05->0.07 updates Convert value (input drives output)", g07!==null && g05!==null && g07>g05, "0.05="+g05+" 0.07="+g07);
+    ok("growth 0.07 Convert ≈ C*(1.07)^n (engine used the EDITED value, not default 0.05)", g07!==null && Math.abs(g07-exp07)<=Math.max(2,exp07*0.0001), "got "+g07+" exp "+Math.round(exp07));
+
+    // 2) growth 0.03 must DROP it below the 0.05 figure
+    setField('projection.growthRate','0.03'); const g03=convertCardValue();
+    ok("growth ->0.03 drops Convert value below the 0.05 figure", g03!==null && g03<g05, "0.03="+g03+" 0.05="+g05);
+
+    // 3) horizon 20 -> 30 grows the value
+    setField('projection.growthRate','0.05');
+    setField('projection.horizonYears','20'); const h20=convertCardValue();
+    setField('projection.horizonYears','30'); const h30=convertCardValue();
+    ok("horizon 20->30 grows Convert value", h20!==null && h30!==null && h30>h20, "20yr="+h20+" 30yr="+h30);
+    setField('projection.horizonYears','20');
+
+    // 4) displayed field value and the engine value are consistent (no divergence — the whole bug)
+    setField('projection.growthRate','0.06');
+    const shown=document.querySelector('input[data-path="projection.growthRate"]').value;
+    ok("displayed growth field equals the value the engine used (no divergence)", parseFloat(shown)===STATE.inp.projection.growthRate, "field="+shown+" state="+STATE.inp.projection.growthRate);
+  } catch(e){
+    fail++; log.push("FAIL  DOM interactivity test threw — "+e.message);
+  } finally {
+    // restore the user's session exactly
+    STATE.inp=JSON.parse(JSON.stringify(savedState)); STATE.step=savedStep; render();
+  }
+  return {pass, fail, log};
+}
+
 window.renderTests=()=>{
   const t=runSelfTests();
-  const head=`Self-tests: ${t.pass} passed, ${t.fail} failed.  §10 worked example: blended=${pct(t.workedExample.costThisYear.blendedEffectiveRate)}, C=$${fmt(t.workedExample.conversionAmount)}\n`+
-    `Worked-example assertion: ${t.fail===0?'PASS':'see failures below'}\n\n`;
-  const body=t.log.map(l=>l.startsWith('PASS')?`<span class="pass">${l}</span>`:`<span class="fail">${l}</span>`).join('\n');
+  const d=runDomInteractivityTests();
+  const head=`Engine self-tests: ${t.pass} passed, ${t.fail} failed.  §10 worked example: blended=${pct(t.workedExample.costThisYear.blendedEffectiveRate)}, C=$${fmt(t.workedExample.conversionAmount)}\n`+
+    `DOM interactivity tests: ${d.pass} passed, ${d.fail} failed.\n`+
+    `Overall: ${(t.fail+d.fail)===0?'PASS':'see failures below'}\n\n`;
+  const fmtLog=l=>l.startsWith('PASS')?`<span class="pass">${l}</span>`:`<span class="fail">${l}</span>`;
+  const body=['— ENGINE —',...t.log,'','— DOM INTERACTIVITY —',...d.log].map(l=>(l.startsWith('PASS')||l.startsWith('FAIL'))?fmtLog(l):l).join('\n');
   $("#testout").innerHTML=head+body;
 };
 
 render();
-// auto-run tests once on load to console for sanity
-try{ const t=runSelfTests(); console.log(`[self-tests] ${t.pass} passed, ${t.fail} failed`); if(t.fail) console.warn(t.log.filter(l=>l.startsWith('FAIL'))); }catch(e){ console.error(e); }
+// auto-run tests once on load to console for sanity (engine + DOM interactivity)
+try{
+  const t=runSelfTests();
+  console.log(`[engine self-tests] ${t.pass} passed, ${t.fail} failed`);
+  if(t.fail) console.warn(t.log.filter(l=>l.startsWith('FAIL')));
+  const d=runDomInteractivityTests();
+  console.log(`[dom interactivity tests] ${d.pass} passed, ${d.fail} failed`);
+  if(d.fail) console.warn(d.log.filter(l=>l.startsWith('FAIL')));
+}catch(e){ console.error(e); }
 </script>
 </body>
 </html>
