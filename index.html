@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roth Conversion Educational Calculator — Tax Year 2026</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#1a2230; --panel2:#222d3d; --ink:#e6edf3; --muted:#9aa7b5;
+    --line:#2c3a4d; --accent:#4f9cff; --accent2:#2f6fd6; --good:#3fb950; --warn:#d29922;
+    --bad:#f85149; --chip:#243044; --focus:#79c0ff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f6f8fa; --panel:#fff; --panel2:#f0f3f6; --ink:#1d2530; --muted:#5a6675;
+      --line:#d6dee7; --accent:#0a66d6; --accent2:#0a4fa6; --chip:#eef2f7; --focus:#0a66d6; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;font-size:15px}
+  .wrap{max-width:920px;margin:0 auto;padding:16px}
+  header.app{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0}
+  h1{font-size:20px;margin:0 0 2px}
+  h2{font-size:17px;margin:0 0 8px}
+  h3{font-size:15px;margin:14px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .banner{background:linear-gradient(90deg,#3a2a00,#2a1f00);color:#ffd479;border:1px solid #5a4400;
+    border-radius:8px;padding:8px 12px;font-size:13px;margin:8px 0;display:flex;gap:8px;align-items:flex-start}
+  @media (prefers-color-scheme: light){.banner{background:#fff8e6;color:#7a5a00;border-color:#e6c965}}
+  .banner b{white-space:nowrap}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
+  .muted{color:var(--muted)}
+  .small{font-size:13px}
+  .row{display:flex;flex-wrap:wrap;gap:12px}
+  .row > .field{flex:1 1 220px}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:3px}
+  input[type=number],input[type=text],select{width:100%;background:var(--panel2);color:var(--ink);
+    border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:15px;font-family:var(--sans)}
+  input:focus,select:focus,button:focus,a:focus{outline:2px solid var(--focus);outline-offset:1px}
+  .checkrow{display:flex;align-items:center;gap:8px;margin:6px 0}
+  .checkrow input{width:auto}
+  .checkrow label{margin:0;color:var(--ink);font-size:14px}
+  button{cursor:pointer;font-family:var(--sans);font-size:14px;border-radius:7px;border:1px solid var(--accent2);
+    background:var(--accent);color:#fff;padding:8px 14px}
+  button.ghost{background:transparent;color:var(--accent);border-color:var(--line)}
+  button.sm{padding:4px 9px;font-size:12px}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .nav{display:flex;justify-content:space-between;gap:8px;margin-top:14px}
+  .steps{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+  .steps .pip{font-size:11px;padding:3px 8px;border-radius:20px;background:var(--chip);color:var(--muted);cursor:pointer;border:1px solid transparent}
+  .steps .pip.active{background:var(--accent);color:#fff}
+  .steps .pip.done{color:var(--ink);border-color:var(--line)}
+  table.fig{width:100%;border-collapse:collapse;margin:6px 0;font-size:14px}
+  table.fig td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.fig td.num{text-align:right;font-family:var(--mono);white-space:nowrap}
+  table.fig td.lbl{color:var(--muted)}
+  table.fig tr.total td{font-weight:700;border-top:2px solid var(--line);border-bottom:none}
+  .cost{color:var(--bad)} .save{color:var(--good)}
+  details.math{margin:3px 0 8px;border-left:2px solid var(--line);padding-left:10px}
+  details.math summary{cursor:pointer;color:var(--accent);font-size:12px;user-select:none}
+  details.math pre{font-family:var(--mono);font-size:12px;white-space:pre-wrap;background:var(--panel2);
+    padding:8px;border-radius:6px;margin:6px 0;color:var(--ink);overflow:auto}
+  .gloss{border-bottom:1px dotted var(--accent);cursor:help;position:relative}
+  .gloss:hover::after,.gloss:focus::after{content:attr(data-tip);position:absolute;left:0;top:1.4em;z-index:30;
+    width:260px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;
+    padding:8px;font-size:12px;font-weight:400;line-height:1.4;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+  .warnbox{border-left:4px solid var(--warn);background:rgba(210,153,34,.10);padding:8px 12px;border-radius:6px;margin:8px 0;font-size:13px}
+  .warnbox.cliff{border-color:var(--bad);background:rgba(248,81,73,.10)}
+  .okbox{border-left:4px solid var(--good);background:rgba(63,185,80,.10);padding:8px 12px;border-radius:6px;margin:8px 0;font-size:13px}
+  .kpi{display:flex;gap:14px;flex-wrap:wrap}
+  .kpi .card{flex:1 1 150px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px}
+  .kpi .card .v{font-size:22px;font-family:var(--mono);font-weight:700}
+  .kpi .card .k{font-size:12px;color:var(--muted)}
+  .pending{font-size:11px;color:var(--warn);font-weight:600}
+  #testpanel pre{font-family:var(--mono);font-size:12px;white-space:pre-wrap}
+  .pass{color:var(--good)} .fail{color:var(--bad);font-weight:700}
+  hr{border:none;border-top:1px solid var(--line);margin:14px 0}
+  @media print{
+    header.app,.nav,.steps,.no-print{display:none!important}
+    .panel{break-inside:avoid;border-color:#ccc}
+    body{background:#fff;color:#000}
+  }
+  .hide{display:none!important}
+</style>
+</head>
+<body>
+<header class="app">
+  <div class="wrap">
+    <h1>Roth Conversion Educational Calculator</h1>
+    <div class="banner" role="note">
+      <span>⚠️</span>
+      <span><b>Tax year 2026 — estimate only.</b> Educational tool, <b>not tax advice</b> and not a substitute for a CPA.
+      Verify all figures before filing. <b>Nothing you enter is stored</b> — all computation runs in your browser, offline, with no network calls.</span>
+    </div>
+    <div class="steps" id="steps" role="tablist" aria-label="Wizard steps"></div>
+  </div>
+</header>
+
+<main class="wrap" id="app"></main>
+
+<script>
+"use strict";
+
+/* ============================================================================
+ *  TAX YEAR CONFIG — 2026   ***REPLACE YEARLY*** (config swap, not a code change)
+ *  Sources: IRS Rev. Proc. 2025-32 / 2025-25 (via Tax Foundation), CMS 2026 IRMAA,
+ *  HHS/ASPE 2025 poverty guidelines, statutory NIIT/SS, SECURE 2.0 RMD.
+ *  IRMAA & ACA objects pasted verbatim from ARIA's verified supplement.
+ *  To roll to 2027: replace this entire CONFIG_2026 block; engine code is untouched.
+ * ========================================================================== */
+const CONFIG_2026 = {
+  year: 2026,
+
+  // 7.1 federal ordinary brackets (taxable income). max=Infinity for top bracket.
+  federalOrdinaryBrackets: {
+    single: [
+      {rate:0.10,min:0,max:12400},{rate:0.12,min:12400,max:50400},{rate:0.22,min:50400,max:105700},
+      {rate:0.24,min:105700,max:201775},{rate:0.32,min:201775,max:256225},{rate:0.35,min:256225,max:640600},
+      {rate:0.37,min:640600,max:Infinity}
+    ],
+    mfj: [
+      {rate:0.10,min:0,max:24800},{rate:0.12,min:24800,max:100800},{rate:0.22,min:100800,max:211400},
+      {rate:0.24,min:211400,max:403550},{rate:0.32,min:403550,max:512450},{rate:0.35,min:512450,max:768700},
+      {rate:0.37,min:768700,max:Infinity}
+    ],
+    hoh: [
+      {rate:0.10,min:0,max:17700},{rate:0.12,min:17700,max:67450},{rate:0.22,min:67450,max:105700},
+      {rate:0.24,min:105700,max:201775},{rate:0.32,min:201775,max:256200},{rate:0.35,min:256200,max:640600},
+      {rate:0.37,min:640600,max:Infinity}
+    ],
+    // MFS: brackets mirror single doubled-down; provided for completeness. IRMAA gated (see below).
+    mfs: [
+      {rate:0.10,min:0,max:12400},{rate:0.12,min:12400,max:50400},{rate:0.22,min:50400,max:105700},
+      {rate:0.24,min:105700,max:201775},{rate:0.32,min:201775,max:256225},{rate:0.35,min:256225,max:384350},
+      {rate:0.37,min:384350,max:Infinity}
+    ]
+  },
+
+  standardDeduction: { single:16100, mfj:32200, hoh:24150, mfs:16100 },
+  // age 65+ additional standard deduction
+  seniorAddlStandardDeduction: { single:2050, mfjPerSpouse:1650, hoh:2050, mfsPerSpouse:1650 },
+  // OBBBA senior deduction (modeled optional; 6% phaseout over MAGI floor)
+  obbbaSeniorDeduction: { perPerson:6000, phaseoutRate:0.06, magiFloor:{single:75000,mfj:150000,hoh:75000,mfs:75000} },
+
+  // 7.6 LTCG/qualified-dividend brackets (taxable-income thresholds)
+  ltcgBrackets: {
+    single:[{rate:0.00,min:0,max:49450},{rate:0.15,min:49450,max:545500},{rate:0.20,min:545500,max:Infinity}],
+    mfj:[{rate:0.00,min:0,max:98900},{rate:0.15,min:98900,max:613700},{rate:0.20,min:613700,max:Infinity}],
+    hoh:[{rate:0.00,min:0,max:66200},{rate:0.15,min:66200,max:579600},{rate:0.20,min:579600,max:Infinity}],
+    mfs:[{rate:0.00,min:0,max:49450},{rate:0.15,min:49450,max:306850},{rate:0.20,min:306850,max:Infinity}]
+  },
+
+  // 7.7 NIIT (statutory, not indexed)
+  niit: { rate:0.038, threshold:{single:200000,mfj:250000,hoh:200000,mfs:125000} },
+
+  // 7.5 Social Security provisional-income thresholds (statutory). hoh uses single; mfs special-cased in engine.
+  ssProvisionalThresholds: {
+    single:{base:25000,top:34000}, mfj:{base:32000,top:44000},
+    hoh:{base:25000,top:34000}, mfs:{base:0,top:0}
+  },
+
+  // 7.8 IRMAA — Monthly, per beneficiary. magiMax exclusive.
+  // SOURCING (ARIA closeout 2026-06-16): Part B Single/MFJ/MFS dollars & boundaries are CONFIRMED to
+  // FEDERAL PRIMARY — Federal Register notice 2025-20251 (govinfo PDF, text-extracted). Part D per-tier
+  // dollars via authoritative .gov (Illinois Dept. on Aging SHIP reproducing the CMS fact sheet, which
+  // 403s to automated fetch). No pending/one-step-removed caveat remains for IRMAA.
+  irmaa: {
+    partBBasePremiumMonthly: 202.90,
+    single: [
+      { magiMin: 0,       magiMax: 109000, partBSurchargeMonthly: 0.00,   partDSurchargeMonthly: 0.00 },
+      { magiMin: 109000,  magiMax: 137000, partBSurchargeMonthly: 81.20,  partDSurchargeMonthly: 14.50 },
+      { magiMin: 137000,  magiMax: 171000, partBSurchargeMonthly: 202.90, partDSurchargeMonthly: 37.50 },
+      { magiMin: 171000,  magiMax: 205000, partBSurchargeMonthly: 324.60, partDSurchargeMonthly: 60.40 },
+      { magiMin: 205000,  magiMax: 500000, partBSurchargeMonthly: 446.30, partDSurchargeMonthly: 83.30 },
+      { magiMin: 500000,  magiMax: Infinity, partBSurchargeMonthly: 487.00, partDSurchargeMonthly: 91.00 }
+    ],
+    mfj: [
+      { magiMin: 0,       magiMax: 218000, partBSurchargeMonthly: 0.00,   partDSurchargeMonthly: 0.00 },
+      { magiMin: 218000,  magiMax: 274000, partBSurchargeMonthly: 81.20,  partDSurchargeMonthly: 14.50 },
+      { magiMin: 274000,  magiMax: 342000, partBSurchargeMonthly: 202.90, partDSurchargeMonthly: 37.50 },
+      { magiMin: 342000,  magiMax: 410000, partBSurchargeMonthly: 324.60, partDSurchargeMonthly: 60.40 },
+      { magiMin: 410000,  magiMax: 750000, partBSurchargeMonthly: 446.30, partDSurchargeMonthly: 83.30 },
+      { magiMin: 750000,  magiMax: Infinity, partBSurchargeMonthly: 487.00, partDSurchargeMonthly: 91.00 }
+    ],
+    hoh: null, // HoH uses the single schedule (set in engine)
+    // MFS (married, lived with spouse, files separately) — CONFIRMED PRIMARY (Fed. Reg. 2025-20251).
+    // Middle boundary is $391,000 (NOT $394k/$397k — ARIA confirmed verbatim to the Federal Register
+    // Part B notice; Part D $391k boundary independently confirmed via .gov SHIP). Fully supported.
+    mfs: {
+      tiers: [
+        { magiMin: 0,       magiMax: 109000, partBSurchargeMonthly: 0.00,   partDSurchargeMonthly: 0.00 },
+        { magiMin: 109000,  magiMax: 391000, partBSurchargeMonthly: 446.30, partDSurchargeMonthly: 83.30 },
+        { magiMin: 391000,  magiMax: Infinity, partBSurchargeMonthly: 487.00, partDSurchargeMonthly: 91.00 }
+      ]
+    }
+  },
+  irmaaLookbackYears: 2,
+
+  // 7.12 RMD — SECURE 2.0. Uniform Lifetime Table (subset; extend as needed).
+  rmd: {
+    startAge: 73, // turning 73 in 2023-2032; 75 from 2033
+    uniformLifetime: {
+      73:26.5,74:25.5,75:24.6,76:23.7,77:22.9,78:22.0,79:21.1,80:20.2,81:19.4,82:18.5,
+      83:17.7,84:16.8,85:16.0,86:15.2,87:14.4,88:13.7,89:12.9,90:12.2,91:11.5,92:10.8,
+      93:10.1,94:9.5,95:8.9,96:8.4,97:7.8,98:7.3,99:6.8,100:6.4
+    }
+  },
+
+  // 7.9 ACA — pasted verbatim from ARIA supplement (Section B.4). 2025 HHS guidelines govern 2026 coverage.
+  fpl: { base:15650, perPerson:5500 }, // 48 contiguous + DC, household of 1
+  aca: {
+    cliffPctFPL: 4.0,
+    cliffActive: true,
+    requiredContributionPct: 9.96,
+    applicablePctSchedule: [
+      { fplMin:0.00, fplMax:1.33, initialPct:2.10, finalPct:2.10 },
+      { fplMin:1.33, fplMax:1.50, initialPct:3.14, finalPct:4.19 },
+      { fplMin:1.50, fplMax:2.00, initialPct:4.19, finalPct:6.60 },
+      { fplMin:2.00, fplMax:2.50, initialPct:6.60, finalPct:8.44 },
+      { fplMin:2.50, fplMax:3.00, initialPct:8.44, finalPct:9.96 },
+      { fplMin:3.00, fplMax:4.00, initialPct:9.96, finalPct:9.96 }
+    ]
+  },
+
+  // 8.9 State config. Oregon = example active state. "none" = no-income-tax (empty brackets -> 0).
+  stateConfig: {
+    none: { name:"No income tax (e.g., WA/FL/TX/NV)", brackets:[], standardDeduction:0, retirementSubtraction:0 },
+    // Oregon 2026 (ARIA closeout 2026-06-16).
+    //  - standardDeduction: 2026 PRIMARY (DOR 2026 Withholding Tax Formulas 150-206-436, Rev. 12-31-25).
+    //  - retirementSubtraction:0 PRIMARY — a Roth conversion is fully-taxable OR ordinary income (no subtraction).
+    //  - rates (4.75/6.75/8.75/9.9%) and the $125k/$250k top boundaries are STATUTORY (final, not indexed).
+    //  - LOWER bracket BOUNDARIES are 2025 placeholders: DOR has NOT published the 2026 indexed OR-40 charts
+    //    (404 as of 2026-06-16; expected ~Dec 2025/Jan 2026). KEEP verify:true until those publish.
+    //  - Oregon uses two charts only: single & mfs share Chart S; mfj, hoh, qss share Chart J.
+    OR: {
+      name:"Oregon (2026 std deduction final; bracket boundaries 2025 placeholder — VERIFY 2026)",
+      verify:true,
+      standardDeduction:{single:2910,mfj:5820,hoh:5820,mfs:2910},
+      brackets:{
+        // Chart S (single, mfs): lower boundaries 2025 placeholder; 125000 top is statutory/final.
+        single:[{rate:0.0475,min:0,max:4300},{rate:0.0675,min:4300,max:10750},{rate:0.0875,min:10750,max:125000},{rate:0.099,min:125000,max:Infinity}],
+        // Chart J (mfj, hoh, qss): lower boundaries 2025 placeholder; 250000 top is statutory/final.
+        mfj:[{rate:0.0475,min:0,max:8600},{rate:0.0675,min:8600,max:21500},{rate:0.0875,min:21500,max:250000},{rate:0.099,min:250000,max:Infinity}],
+        hoh:[{rate:0.0475,min:0,max:8600},{rate:0.0675,min:8600,max:21500},{rate:0.0875,min:21500,max:250000},{rate:0.099,min:250000,max:Infinity}],
+        mfs:[{rate:0.0475,min:0,max:4300},{rate:0.0675,min:4300,max:10750},{rate:0.0875,min:10750,max:125000},{rate:0.099,min:125000,max:Infinity}]
+      },
+      retirementSubtraction:0
+    }
+  }
+};
+
+/* ============================================================================
+ *  CALCULATION ENGINE  (pure functions; money in CENTS internally)
+ *  Spec §7. Each function references its spec sub-section.
+ * ========================================================================== */
+const C100 = 100;
+const toC = d => Math.round((Number(d)||0) * C100);          // dollars -> cents
+const toD = c => c / C100;                                   // cents -> dollars
+const clamp0 = n => n < 0 ? 0 : n;
+
+// 7.1 progressive ordinary tax. income & bracket bounds in CENTS. Returns CENTS.
+function tax(incomeC, brackets){
+  let t = 0;
+  for(const b of brackets){
+    const minC = b.min*C100, maxC = (b.max===Infinity?Infinity:b.max*C100);
+    if(incomeC > minC){
+      t += (Math.min(incomeC, maxC) - minC) * b.rate;
+    }
+  }
+  return Math.round(t);
+}
+// bracket rate at a given taxable income (cents). Used by the engine for headroom/state-marginal
+// computation — DO NOT change its convention (tax math depends on the [min, max) membership).
+function marginalRate(incomeC, brackets){
+  let r = brackets[0].rate;
+  for(const b of brackets){ if(incomeC > b.min*C100) r = b.rate; }
+  // exactly at/below first min -> lowest rate
+  for(const b of brackets){ if(incomeC >= b.min*C100 && incomeC < b.max*C100){ return b.rate; } }
+  return r;
+}
+// F5 (display-only): the rate of the LAST taxed dollar at a given taxable income.
+// marginalRate() uses [min, max) membership, so income sitting exactly on a bracket FLOOR
+// reports the upper bracket's rate even though the taxpayer has not yet earned a dollar in it
+// (their last dollar was the lower rate). For the "current marginal bracket" display we report
+// the rate the income tops out at: when income == a bracket boundary, that's the lower bracket
+// whose max == income. Tax owed is unaffected — this only changes the displayed bracket label.
+function displayMarginalRate(incomeC, brackets){
+  for(const b of brackets){
+    const maxC = b.max===Infinity ? Infinity : b.max*C100;
+    // income strictly inside a band, OR sitting exactly on this band's upper boundary
+    if(incomeC > b.min*C100 && incomeC <= maxC) return b.rate;
+  }
+  return brackets[0].rate; // income at/below the very first floor (0) -> lowest rate
+}
+function bracketTopC(incomeC, brackets){
+  for(const b of brackets){ if(incomeC >= b.min*C100 && incomeC < b.max*C100) return b.max===Infinity?Infinity:b.max*C100; }
+  return Infinity;
+}
+function topOfBracketC(rate, brackets){
+  for(const b of brackets){ if(Math.abs(b.rate-rate)<1e-9) return b.max===Infinity?Infinity:b.max*C100; }
+  return Infinity;
+}
+
+// senior additional standard deduction (dollars)
+function seniorAddl(cfg, fs, userAge, spouseAge){
+  let add = 0;
+  if(fs==='mfj'){
+    if(userAge>=65) add += cfg.seniorAddlStandardDeduction.mfjPerSpouse;
+    if(spouseAge!=null && spouseAge>=65) add += cfg.seniorAddlStandardDeduction.mfjPerSpouse;
+  } else {
+    if(userAge>=65) add += cfg.seniorAddlStandardDeduction.single; // single/hoh
+    if(fs==='mfs' && spouseAge!=null && spouseAge>=65) add += cfg.seniorAddlStandardDeduction.mfsPerSpouse;
+  }
+  return add;
+}
+
+// 7.5 taxable Social Security (IRS two-threshold worksheet). All inputs DOLLARS. Returns DOLLARS taxable SS.
+function taxableSS(cfg, fs, otherIncomeExclSS, taxExemptInterest, ssGross){
+  if(ssGross<=0) return 0;
+  const th = cfg.ssProvisionalThresholds[fs] || cfg.ssProvisionalThresholds.single;
+  if(th.top<=0) return 0.85*ssGross; // mfs degenerate (base/top = 0): 85% taxable. See F3 note re: MFS-lived-apart.
+  const provisional = otherIncomeExclSS + taxExemptInterest + 0.5*ssGross;
+  if(provisional <= th.base) return 0;
+  if(provisional <= th.top){
+    return Math.min(0.5*(provisional - th.base), 0.5*ssGross);
+  }
+  // above top: lesser of 85% of SS, or 85%*(prov-top) + min(0.5*SS, 0.5*(top-base))
+  const lower = Math.min(0.5*ssGross, 0.5*(th.top - th.base));
+  return Math.min(0.85*ssGross, 0.85*(provisional - th.top) + lower);
+}
+
+// 7.6 LTCG stack tax. ordinaryTaxableC = ordinary taxable income (post-deduction) in CENTS (the stack base);
+// gainsC = qualified div + LTCG in CENTS. Returns CENTS of LTCG tax.
+function ltcgStackTax(ordinaryTaxableC, gainsC, ltcgBrackets){
+  if(gainsC<=0) return 0;
+  let remaining = gainsC, t = 0, stack = ordinaryTaxableC;
+  for(const b of ltcgBrackets){
+    const minC=b.min*C100, maxC=(b.max===Infinity?Infinity:b.max*C100);
+    if(stack >= maxC) continue;                 // this LTCG band already filled by ordinary stack
+    const bandFloor = Math.max(stack, minC);
+    const room = maxC - bandFloor;
+    if(room<=0) continue;
+    const taxed = Math.min(remaining, room);
+    if(taxed>0){ t += taxed*b.rate; remaining -= taxed; stack += taxed; }
+    if(remaining<=0) break;
+  }
+  return Math.round(t);
+}
+
+// IRMAA tier lookup for a MAGI (dollars). Returns {tier index, partB, partD, magiMin, magiMax, pending}
+function irmaaTier(cfg, fs, magi){
+  let tiers;
+  if(fs==='hoh' || fs==='single') tiers = cfg.irmaa.single;
+  else if(fs==='mfj') tiers = cfg.irmaa.mfj;
+  else if(fs==='mfs') tiers = cfg.irmaa.mfs.tiers;
+  else tiers = cfg.irmaa.single;
+  // IRMAA rule: surcharge applies only when MAGI is STRICTLY ABOVE a boundary
+  // ("cross by $1"). A MAGI sitting exactly on a boundary stays in the LOWER tier.
+  // So tier membership is magiMin < magi <= magiMax (lower-inclusive upper bound).
+  for(let i=0;i<tiers.length;i++){
+    const t=tiers[i];
+    const lower = (i===0) ? -Infinity : t.magiMin;   // tier 0 starts at -inf for the boundary case
+    if(magi > lower && magi <= t.magiMax){
+      return {idx:i, partB:t.partBSurchargeMonthly, partD:t.partDSurchargeMonthly,
+        magiMin:t.magiMin, magiMax:t.magiMax, pending: false};
+    }
+  }
+  const last=tiers[tiers.length-1];
+  return {idx:tiers.length-1, partB:last.partBSurchargeMonthly, partD:last.partDSurchargeMonthly,
+    magiMin:last.magiMin, magiMax:last.magiMax, pending: false};
+}
+
+// 7.9 ACA: applicable % of household income (linear interpolation within band). magiPctFPL is a ratio (e.g. 3.2 = 320%).
+function acaApplicablePct(cfg, magiPctFPL){
+  const sch = cfg.aca.applicablePctSchedule;
+  if(magiPctFPL < sch[0].fplMin) return sch[0].initialPct/100;
+  for(const band of sch){
+    if(magiPctFPL >= band.fplMin && magiPctFPL < band.fplMax){
+      const frac = (band.fplMax===band.fplMin)?0:(magiPctFPL-band.fplMin)/(band.fplMax-band.fplMin);
+      return (band.initialPct + frac*(band.finalPct-band.initialPct))/100;
+    }
+  }
+  return cfg.aca.applicablePctSchedule.slice(-1)[0].finalPct/100; // at/above top band
+}
+// ACA premium tax credit (dollars). benchmarkAnnual = SLCSP annual premium. Cliff: >400% FPL -> 0.
+function acaSubsidy(cfg, magi, householdSize, benchmarkAnnual){
+  if(benchmarkAnnual<=0) return 0;
+  const fplBase = cfg.fpl.base + (householdSize-1)*cfg.fpl.perPerson;
+  if(fplBase<=0) return 0;
+  const pctFPL = magi / fplBase;
+  if(cfg.aca.cliffActive && pctFPL > cfg.aca.cliffPctFPL) return 0; // cliff
+  const applPct = acaApplicablePct(cfg, pctFPL);
+  const expectedContribution = applPct * magi;
+  return clamp0(benchmarkAnnual - expectedContribution);
+}
+
+/* ---- Main single-year computation. inp = ConversionInputs-shaped. Returns ConversionResults. ---- */
+function computeConversion(cfg, inp){
+  const fs = inp.filingStatus;
+  const brackets = cfg.federalOrdinaryBrackets[fs];
+  const ltcgB = cfg.ltcgBrackets[fs];
+  const inc = inp.income;
+  const warnings = [];
+
+  // deduction (standard + senior addl; OBBBA optional)
+  let deduction = cfg.standardDeduction[fs] + seniorAddl(cfg, fs, inp.userAge, inp.spouseAge);
+  let obbba = 0;
+  if(inp.applyObbba){
+    const elig = (inp.userAge>=65?1:0) + (fs==='mfj' && inp.spouseAge!=null && inp.spouseAge>=65?1:0);
+    obbba = elig * cfg.obbbaSeniorDeduction.perPerson; // phaseout applied vs MAGI below
+  }
+
+  // --- pre-conversion ordinary taxable income (incl. taxable SS) ---
+  const ssTaxBefore = taxableSS(cfg, fs, inc.ordinaryIncome, inc.taxExemptInterest, inc.socialSecurityGross);
+  // AGI excludes SS portion not taxable; AGI = ordinary + taxableSS + gains (LTCG/qual div are in AGI)
+  const agiBefore = inc.ordinaryIncome + ssTaxBefore + inc.qualifiedDivLtcg;
+  // OBBBA phaseout uses MAGI; approximate MAGI = AGI + tax-exempt interest
+  const magiBefore = agiBefore + inc.taxExemptInterest;
+  let obbbaBefore = obbba;
+  if(obbba>0){
+    const floor = cfg.obbbaSeniorDeduction.magiFloor[fs];
+    obbbaBefore = clamp0(obbba - cfg.obbbaSeniorDeduction.phaseoutRate*clamp0(magiBefore-floor));
+  }
+  const deductionBefore = deduction + obbbaBefore;
+  const ordinaryTaxableBefore = clamp0(inc.ordinaryIncome + ssTaxBefore - deductionBefore);
+
+  const mRateBefore = displayMarginalRate(toC(ordinaryTaxableBefore), brackets); // F5: display-only convention
+  const topC = bracketTopC(toC(ordinaryTaxableBefore), brackets);
+  const headroom = topC===Infinity ? Infinity : toD(topC - toC(ordinaryTaxableBefore));
+
+  // --- conversion sizing (7.3) ---
+  let C;
+  if(inp.conversion.mode==='fillBracket'){
+    const topRateC = topOfBracketC(inp.conversion.targetBracketRate, brackets);
+    C = topRateC===Infinity ? 0 : clamp0(toD(topRateC) - ordinaryTaxableBefore);
+  } else {
+    C = Number(inp.conversion.amount)||0;
+  }
+  // validation §9: conversion <= taxDeferred
+  if(C > inp.balances.taxDeferred){
+    C = inp.balances.taxDeferred;
+    warnings.push("Conversion capped at your tax-deferred balance ($"+fmt(inp.balances.taxDeferred)+").");
+  }
+
+  // --- AFTER conversion: recompute taxable SS with conversion in provisional income (7.5) ---
+  const ssTaxAfter = taxableSS(cfg, fs, inc.ordinaryIncome + C, inc.taxExemptInterest, inc.socialSecurityGross);
+  const agiAfter = inc.ordinaryIncome + C + ssTaxAfter + inc.qualifiedDivLtcg;
+  const magiAfter = agiAfter + inc.taxExemptInterest;
+  let obbbaAfter = obbba;
+  if(obbba>0){
+    const floor = cfg.obbbaSeniorDeduction.magiFloor[fs];
+    obbbaAfter = clamp0(obbba - cfg.obbbaSeniorDeduction.phaseoutRate*clamp0(magiAfter-floor));
+  }
+  const deductionAfter = deduction + obbbaAfter;
+  const ordinaryTaxableAfter = clamp0(inc.ordinaryIncome + C + ssTaxAfter - deductionAfter);
+
+  // --- 7.4 + 7.5 incremental federal ordinary tax (single delta, no double count) ---
+  const fedTaxBefore = tax(toC(ordinaryTaxableBefore), brackets);
+  const fedTaxAfter  = tax(toC(ordinaryTaxableAfter),  brackets);
+  const federalIncrementalTax = toD(fedTaxAfter - fedTaxBefore);
+
+  // SS-torpedo component (portion of the federal delta attributable to newly-taxable SS).
+  // Reported for transparency; already inside federalIncrementalTax.
+  const fedNoSSBefore = tax(toC(clamp0(inc.ordinaryIncome + ssTaxBefore - deductionBefore)), brackets);
+  const ordTaxableAfterNoSSdelta = clamp0(inc.ordinaryIncome + C + ssTaxBefore - deductionAfter);
+  const fedNoSSAfter = tax(toC(ordTaxableAfterNoSSdelta), brackets);
+  const ssTaxationExtraTax = toD((fedTaxAfter - fedTaxBefore) - (fedNoSSAfter - fedNoSSBefore));
+
+  // --- 7.6 LTCG stacking ---
+  // F1 fix: when ordinary income is below the deduction, the leftover (unused) deduction
+  // must reduce the gains amount before stacking — otherwise gains are over-taxed.
+  // Stack base stays the floored ordinary taxable income; gains shrink by the leftover deduction.
+  const ordinaryRawBefore = inc.ordinaryIncome + ssTaxBefore - deductionBefore;   // may be negative
+  const leftoverDedBefore = clamp0(-ordinaryRawBefore);
+  const gainsTaxableBefore = clamp0(inc.qualifiedDivLtcg - leftoverDedBefore);
+  const ordinaryRawAfter = inc.ordinaryIncome + C + ssTaxAfter - deductionAfter;  // conversion raises ordinary -> leftover shrinks/disappears
+  const leftoverDedAfter = clamp0(-ordinaryRawAfter);
+  const gainsTaxableAfter = clamp0(inc.qualifiedDivLtcg - leftoverDedAfter);
+  const ltcgBefore = ltcgStackTax(toC(ordinaryTaxableBefore), toC(gainsTaxableBefore), ltcgB);
+  const ltcgAfter  = ltcgStackTax(toC(ordinaryTaxableAfter),  toC(gainsTaxableAfter),  ltcgB);
+  const ltcgStackingExtraTax = toD(ltcgAfter - ltcgBefore);
+
+  // --- 7.7 NIIT ---
+  const niitTh = cfg.niit.threshold[fs];
+  const niitBefore = cfg.niit.rate * Math.min(inc.netInvestmentIncome, clamp0(magiBefore - niitTh));
+  const niitAfter  = cfg.niit.rate * Math.min(inc.netInvestmentIncome, clamp0(magiAfter  - niitTh));
+  const niitExtraTax = niitAfter - niitBefore;
+
+  // --- 7.8 IRMAA (only if on/near Medicare) ---
+  let irmaaAnnualSurchargeDelta = 0, irmaaInfo=null;
+  if(inp.onMedicare || inp.userAge>=63){
+    const tB = irmaaTier(cfg, fs, magiBefore);
+    const tA = irmaaTier(cfg, fs, magiAfter);
+    irmaaAnnualSurchargeDelta = ((tA.partB+tA.partD)-(tB.partB+tB.partD))*12*(inp.medicareBeneficiaries||1);
+    const distToNext = tA.magiMax===Infinity?Infinity:(tA.magiMax - magiAfter);
+    irmaaInfo = {tierBefore:tB.idx, tierAfter:tA.idx, distToNext, magiAfter, pending: tA.pending, magiMaxAfter:tA.magiMax};
+    if(tA.idx > tB.idx){
+      warnings.push("⚠️ CLIFF: conversion crosses "+(tA.idx-tB.idx)+" IRMAA tier(s). Added Medicare surcharge ≈ $"+fmt(irmaaAnnualSurchargeDelta)+"/yr (per beneficiary × "+(inp.medicareBeneficiaries||1)+"), applied to the future premium year (2-yr MAGI lookback).");
+    } else if(distToNext!==Infinity && distToNext < C*0.5){
+      warnings.push("IRMAA: you are $"+fmt(distToNext)+" below the next IRMAA boundary after this conversion.");
+    }
+  }
+
+  // --- 7.9 ACA (pre-Medicare marketplace only) ---
+  let acaSubsidyDelta = 0, acaInfo=null;
+  if(inp.acaMarketplace && inp.userAge<65){
+    const bench = inp.acaBenchmarkAnnual||0;
+    const sBefore = acaSubsidy(cfg, magiBefore, inp.householdSize||1, bench);
+    const sAfter  = acaSubsidy(cfg, magiAfter,  inp.householdSize||1, bench);
+    acaSubsidyDelta = sAfter - sBefore; // negative = lost subsidy = cost
+    const fplBase = cfg.fpl.base + ((inp.householdSize||1)-1)*cfg.fpl.perPerson;
+    const pctBefore = magiBefore/fplBase, pctAfter = magiAfter/fplBase;
+    acaInfo = {pctBefore, pctAfter, sBefore, sAfter, fplBase};
+    if(cfg.aca.cliffActive && pctBefore<=cfg.aca.cliffPctFPL && pctAfter>cfg.aca.cliffPctFPL){
+      warnings.push("⚠️ CLIFF: conversion pushes MAGI above 400% FPL — you lose ALL ACA premium tax credit ($"+fmt(sBefore)+"/yr). This is a hard cliff for 2026.");
+    }
+  }
+
+  // --- state tax (config-driven) ---
+  const st = cfg.stateConfig[inp.state] || cfg.stateConfig.none;
+  let stateIncrementalTax = 0, stateMarginal = 0;
+  if(st.brackets && st.brackets[fs] && st.brackets[fs].length){
+    const sBrk = st.brackets[fs];
+    const sDed = (st.standardDeduction && st.standardDeduction[fs])||0;
+    const sSub = st.retirementSubtraction||0;
+    const sTaxBefore = tax(toC(clamp0(inc.ordinaryIncome + ssTaxBefore - sDed - sSub)), sBrk);
+    const sTaxAfter  = tax(toC(clamp0(inc.ordinaryIncome + C + ssTaxAfter - sDed - sSub)), sBrk);
+    stateIncrementalTax = toD(sTaxAfter - sTaxBefore);
+    stateMarginal = marginalRate(toC(clamp0(inc.ordinaryIncome + C - sDed)), sBrk);
+  }
+
+  // --- 7.10 total cost + blended effective marginal rate ---
+  const totalIncrementalCost = federalIncrementalTax + stateIncrementalTax + ltcgStackingExtraTax
+    + niitExtraTax + irmaaAnnualSurchargeDelta - acaSubsidyDelta; // lost subsidy (negative delta) adds cost
+  const blendedEffectiveRate = C>0 ? (totalIncrementalCost / C) : null; // §9 divide-by-zero guard -> N/A
+
+  // §9 warn: tax payable from outside funds?
+  if(totalIncrementalCost > inp.balances.taxableAvailableForTax){
+    warnings.push("Estimated tax ($"+fmt(totalIncrementalCost)+") exceeds taxable funds available to pay it ($"+fmt(inp.balances.taxableAvailableForTax)+"). Paying from the IRA is less efficient.");
+  }
+
+  // --- 7.11 after-tax value comparison ---
+  // N2: two modes for WHERE the conversion tax is paid from.
+  //   "taxable" (default, efficient): tax paid from OUTSIDE funds. The full C lands in the Roth.
+  //     The "don't convert" side keeps the IRA (taxed later at tFut) PLUS a taxable side fund equal
+  //     to the tax dollars you would otherwise have spent, growing at the after-tax rate g·(1−drag).
+  //   "ira" (less efficient): tax comes OUT of the converted amount. Only C_net = C·(1−blended) lands
+  //     in the Roth. There were NO outside dollars spent on tax, so the "don't convert" side has NO
+  //     side fund — it is simply the IRA grown pre-tax and taxed at tFut. (spec §7.11)
+  let comparison=null;
+  const payTaxFrom = (inp.conversion && inp.conversion.payTaxFrom==='ira') ? 'ira' : 'taxable';
+  if(C>0 && blendedEffectiveRate!=null && inp.projection && inp.projection.expectedFutureMarginalRate!=null){
+    const g = inp.projection.growthRate, n = inp.projection.horizonYears, tFut = inp.projection.expectedFutureMarginalRate;
+    // B1 fix (spec §7.11): the no-convert "side fund" (the tax dollars you'd otherwise have paid)
+    // sits in a TAXABLE account, so it grows at an AFTER-TAX rate, not the full pre-tax/Roth rate.
+    // g_afterTax = g*(1 - taxableDragRate). Config/input-driven via projection.taxableDragRate.
+    const drag = clamp0(Number(inp.projection.taxableDragRate)||0);
+    const gAfter = g * (1 - drag);
+    const grow = Math.pow(1+g, n);            // Roth / IRA pre-tax growth
+    const growSide = Math.pow(1+gAfter, n);   // taxable side-fund growth (slower)
+    let convertAfterTaxValue, noConvertAfterTaxValue, cNet=null;
+    if(payTaxFrom==='ira'){
+      // Tax paid FROM the IRA: reduce converted principal by the tax first.
+      cNet = C * (1 - blendedEffectiveRate);
+      convertAfterTaxValue = clamp0(cNet) * grow;          // Roth grows only C_net, tax-free
+      noConvertAfterTaxValue = C * grow * (1 - tFut);      // IRA grown pre-tax, taxed at tFut; NO side fund
+    } else {
+      convertAfterTaxValue = C * grow;                     // full C in Roth, tax-free
+      // no-convert keeps IRA (grown pre-tax, taxed at tFut) + side fund of tax money grown AFTER-TAX
+      noConvertAfterTaxValue = C*grow*(1-tFut) + (C*blendedEffectiveRate)*growSide;
+    }
+    const advantage = convertAfterTaxValue - noConvertAfterTaxValue;
+    // break-even: smallest year where advantage >= 0, derived consistently per mode.
+    let be=null;
+    for(let y=0;y<=60;y++){
+      const gr=Math.pow(1+g,y), grS=Math.pow(1+gAfter,y);
+      let cv, nc;
+      if(payTaxFrom==='ira'){ cv=clamp0(cNet)*gr; nc=C*gr*(1-tFut); }
+      else { cv=C*gr; nc=C*gr*(1-tFut)+(C*blendedEffectiveRate)*grS; }
+      if(cv-nc>=0){ be=y; break; }
+    }
+    comparison={convertAfterTaxValue, noConvertAfterTaxValue, advantage, breakEvenYears:be, tFuture:tFut,
+      growthRate:g, horizon:n, taxableDragRate:drag, gAfterTax:gAfter, payTaxFrom, cNet, blendedRate:blendedEffectiveRate};
+  }
+
+  // --- 7.12 RMD projection ---
+  let rmd=null;
+  if(inp.balances.taxDeferred>0){
+    const startAge = cfg.rmd.startAge;
+    const factor = cfg.rmd.uniformLifetime[startAge] || 26.5;
+    const g = (inp.projection && inp.projection.growthRate)||0;
+    const yearsToRmd = clamp0(startAge - inp.userAge);
+    const balNoConvert = inp.balances.taxDeferred * Math.pow(1+g, yearsToRmd);
+    const balWithPlan = clamp0(inp.balances.taxDeferred - C) * Math.pow(1+g, yearsToRmd);
+    const firstRmdNoConvert = balNoConvert/factor;
+    const firstRmdWithPlan = balWithPlan/factor;
+    rmd={firstRmdNoConvert, firstRmdWithPlan, rmdReduction:firstRmdNoConvert-firstRmdWithPlan, startAge, factor, yearsToRmd};
+  }
+
+  return {
+    preConversion:{
+      taxableIncome:ordinaryTaxableBefore, agi:agiBefore, magi:magiBefore,
+      marginalRate:mRateBefore, bracketHeadroom:headroom, taxableSSBefore:ssTaxBefore
+    },
+    conversionAmount:C,
+    ordinaryTaxableAfter, taxableSSAfter:ssTaxAfter, magiAfter,
+    costThisYear:{
+      federalIncrementalTax, stateIncrementalTax, stateMarginal,
+      ltcgStackingExtraTax, ssTaxationExtraTax, niitExtraTax,
+      irmaaAnnualSurchargeDelta, acaSubsidyDelta,
+      totalIncrementalCost, blendedEffectiveRate
+    },
+    irmaaInfo, acaInfo, comparison, rmd, warnings,
+    _audit:{deductionBefore, deductionAfter, fedTaxBefore:toD(fedTaxBefore), fedTaxAfter:toD(fedTaxAfter),
+      ltcgBefore:toD(ltcgBefore), ltcgAfter:toD(ltcgAfter), niitBefore, niitAfter,
+      ordinaryTaxableBefore}
+  };
+}
+
+/* ---------- formatting helpers ---------- */
+function fmt(n){ if(n===Infinity) return "∞"; if(n==null||isNaN(n)) return "—";
+  return Number(n).toLocaleString('en-US',{maximumFractionDigits:0}); }
+function fmt2(n){ if(n==null||isNaN(n)) return "—"; return Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function pct(n){ if(n==null||isNaN(n)) return "N/A"; return (n*100).toFixed(2)+"%"; }
+function $(s){return document.querySelector(s);}
+
+/* ============================================================================
+ *  SELF-TESTS (spec §12) — engine assertions rendered to a panel.
+ * ========================================================================== */
+function runSelfTests(){
+  const cfg = CONFIG_2026; let pass=0, fail=0; const log=[];
+  const ok=(name,cond,detail)=>{ if(cond){pass++;log.push("PASS  "+name);} else {fail++;log.push("FAIL  "+name+(detail?("  — "+detail):""));} };
+  const approx=(a,b,tol)=>Math.abs(a-b)<=tol;
+
+  // tax() basics (MFJ): top of 12% bracket = 24800@10 + (100800-24800)@12
+  const mfj=cfg.federalOrdinaryBrackets.mfj;
+  const t12=toD(tax(toC(100800), mfj));
+  ok("tax() MFJ at 100,800 = 11,600", approx(t12, 24800*0.10+76000*0.12, 1), "got "+t12);
+
+  // boundary: $1 into 22% bracket adds ~$0.22
+  const tEdge=toD(tax(toC(100801), mfj)) - t12;
+  ok("tax() MFJ +$1 over 100,800 marginal = 22%", approx(tEdge, 0.22, 0.01), "got "+tEdge);
+
+  // monotonicity property test
+  let mono=true, prev=-1;
+  for(let i=0;i<=800000;i+=2500){ const v=tax(toC(i),mfj); if(v<prev){mono=false;break;} prev=v; }
+  ok("tax() monotonic non-decreasing in income", mono);
+
+  // LTCG stacking: ordinary fills to just below MFJ 0% top (98,900); gains straddle 0->15
+  const lt=cfg.ltcgBrackets.mfj;
+  const ltt=toD(ltcgStackTax(toC(90000), toC(20000), lt)); // 8,900 at 0%, 11,100 at 15% = 1,665
+  ok("LTCG stack MFJ (90k ord + 20k gains) = 1,665", approx(ltt,1665,1), "got "+ltt);
+
+  // ---- F1/B1 FIXTURE: leftover-deduction spillover onto LTCG (Single, ord < deduction) ----
+  // Single, ordinary 10,000, std deduction 16,100, gains 55,000. Leftover deduction 6,100
+  // pulls taxable gains to 48,900 — all under the Single 0% top (49,450) -> LTCG tax = $0 EXACT.
+  const b1Inp={
+    filingStatus:'single', userAge:50, spouseAge:null, state:'none',
+    onMedicare:false, medicareBeneficiaries:0, acaMarketplace:false, householdSize:1,
+    income:{ordinaryIncome:10000, qualifiedDivLtcg:55000, taxExemptInterest:0, socialSecurityGross:0, netInvestmentIncome:0},
+    balances:{taxDeferred:500000, roth:0, taxableAvailableForTax:100000},
+    conversion:{mode:'amount', amount:0, targetBracketRate:null},
+    projection:{horizonYears:20, growthRate:0.05, expectedFutureMarginalRate:0.24, taxableDragRate:0.15},
+    applyObbba:false, acaBenchmarkAnnual:0
+  };
+  const b1r=computeConversion(cfg, b1Inp);
+  ok("B1 leftover-deduction spillover: LTCG tax = $0 EXACT (Single 10k ord / 55k gains)", b1r._audit.ltcgBefore===0, "got "+b1r._audit.ltcgBefore+" (pre-fix engine returned 832.50)");
+  // No-regression: ordinary ABOVE deduction -> no leftover, gains taxed normally.
+  // Single ord 90,000 (taxable 73,900 > 49,450 0% top), gains 20,000 -> all 20k @ 15% = $3,000 EXACT.
+  const ltNoReg=toD(ltcgStackTax(toC(73900), toC(20000), cfg.ltcgBrackets.single));
+  ok("B1 no-regression: ord>deduction gains taxed normally = $3,000 EXACT", ltNoReg===3000, "got "+ltNoReg);
+
+  // NIIT threshold boundary (single 200k): nothing below, 3.8% of NII over
+  const niitT=cfg.niit.threshold.single;
+  ok("NIIT single threshold = 200,000", niitT===200000);
+
+  // IRMAA tier boundary (MFJ): 218,000 is base (tier0), 218,000.01 is tier1
+  const tb0=irmaaTier(cfg,'mfj',218000), tb1=irmaaTier(cfg,'mfj',218001);
+  ok("IRMAA MFJ 218,000 = tier 0", tb0.idx===0);
+  ok("IRMAA MFJ 218,001 = tier 1 (cliff)", tb1.idx===1 && tb1.partB===81.20);
+
+  // ACA 400% FPL cliff: just under keeps subsidy, just over -> 0
+  const hh=2, fplBase=cfg.fpl.base+(hh-1)*cfg.fpl.perPerson; // 21,150
+  const magiUnder=fplBase*3.99, magiOver=fplBase*4.01, bench=14000;
+  const sU=acaSubsidy(cfg, magiUnder, hh, bench), sO=acaSubsidy(cfg, magiOver, hh, bench);
+  ok("ACA subsidy > 0 just under 400% FPL", sU>0, "got "+sU.toFixed(0));
+  ok("ACA subsidy = 0 just over 400% FPL (cliff)", sO===0);
+
+  // ---- §10 WORKED EXAMPLE: MFJ both 62, Oregon, fill the 22% bracket ----
+  const inp={
+    filingStatus:'mfj', userAge:62, spouseAge:62, state:'OR',
+    onMedicare:false, medicareBeneficiaries:0, acaMarketplace:false, householdSize:2,
+    income:{ordinaryIncome:95000, qualifiedDivLtcg:0, taxExemptInterest:0, socialSecurityGross:0, netInvestmentIncome:0},
+    balances:{taxDeferred:800000, roth:50000, taxableAvailableForTax:100000},
+    conversion:{mode:'fillBracket', amount:null, targetBracketRate:0.22},
+    projection:{horizonYears:20, growthRate:0.05, expectedFutureMarginalRate:0.24, taxableDragRate:0.15},
+    applyObbba:false, acaBenchmarkAnnual:0
+  };
+  const r=computeConversion(cfg, inp);
+  // ordinary taxable before = 95000 - 32200 = 62800 (in 12% bracket). Fill to top of 22% = 211,400.
+  // C = 211,400 - 62,800 = 148,600. Federal incremental should be ~22% blended-ish on that chunk.
+  ok("§10 conversion fills 22% bracket (C≈148,600)", approx(r.conversionAmount,148600,5), "C="+r.conversionAmount);
+  // blended rate: fed portion crosses 12%->22%, so federal effective < 22%; plus OR ~8.75-9.9%. Expect roughly 0.27-0.33.
+  ok("§10 blendedEffectiveRate present & between 18% and 35%", r.costThisYear.blendedEffectiveRate>0.18 && r.costThisYear.blendedEffectiveRate<0.35, "rate="+pct(r.costThisYear.blendedEffectiveRate));
+  // federal incremental: tax(211400)-tax(62800) on MFJ
+  const fedExp=toD(tax(toC(211400),mfj)-tax(toC(62800),mfj));
+  ok("§10 federal incremental matches hand calc", approx(r.costThisYear.federalIncrementalTax, fedExp, 1), "got "+r.costThisYear.federalIncrementalTax+" exp "+fedExp);
+  // no IRMAA (age 62), no ACA (not marketplace)
+  ok("§10 no IRMAA effect (pre-Medicare, age<63)", r.costThisYear.irmaaAnnualSurchargeDelta===0);
+  ok("§10 no ACA effect (not on marketplace)", r.costThisYear.acaSubsidyDelta===0);
+  // advantage > 0 when expectedFutureMarginalRate (0.24) >= blendedEffectiveRate? Here blended incl OR may exceed 0.24.
+  // Spec asserts advantage>0 when tFuture >= blended. Test the conditional both ways:
+  if(inp.projection.expectedFutureMarginalRate >= r.costThisYear.blendedEffectiveRate){
+    ok("§10 advantage > 0 when tFuture ≥ blended", r.comparison.advantage>0, "adv="+r.comparison.advantage.toFixed(0)+" blended="+pct(r.costThisYear.blendedEffectiveRate));
+  } else {
+    // raise tFuture above blended and re-test the property
+    const inp2=JSON.parse(JSON.stringify(inp)); inp2.projection.expectedFutureMarginalRate=Math.min(0.40, r.costThisYear.blendedEffectiveRate+0.05);
+    const r2=computeConversion(cfg,inp2);
+    ok("§10 advantage > 0 when tFuture ≥ blended (tFuture raised to "+pct(inp2.projection.expectedFutureMarginalRate)+")", r2.comparison.advantage>0, "adv="+r2.comparison.advantage.toFixed(0));
+  }
+  // divide-by-zero guard: C=0 -> blended N/A
+  const inpZero=JSON.parse(JSON.stringify(inp)); inpZero.conversion={mode:'amount',amount:0,targetBracketRate:null};
+  const rz=computeConversion(cfg,inpZero);
+  ok("§9 C=0 -> blendedEffectiveRate = null (N/A)", rz.costThisYear.blendedEffectiveRate===null);
+  // conversion <= taxDeferred guard
+  const inpCap=JSON.parse(JSON.stringify(inp)); inpCap.conversion={mode:'amount',amount:9000000,targetBracketRate:null};
+  const rc=computeConversion(cfg,inpCap);
+  ok("§9 conversion capped at taxDeferred", rc.conversionAmount===inpCap.balances.taxDeferred);
+
+  // ---- B2/B3: after-tax side fund + genuine break-even crossover ----
+  // With taxableDragRate=0.15, g=0.05 -> g_afterTax = 0.0425 EXACT.
+  ok("B2 side fund grows at after-tax rate g·(1−drag)=0.0425", approx(r.comparison.gAfterTax, 0.0425, 1e-9), "got "+r.comparison.gAfterTax);
+  // Marginal case: blended (~28.2%) slightly above tFut -> advantage starts NEGATIVE but Roth
+  // tax-free growth overtakes the taxed side fund, producing a real crossover (not 0 / never).
+  const beInp=JSON.parse(JSON.stringify(inp)); beInp.projection.expectedFutureMarginalRate=0.27;
+  const adv0=computeConversion(cfg,Object.assign(JSON.parse(JSON.stringify(beInp)),{projection:Object.assign({},beInp.projection,{horizonYears:0})})).comparison.advantage;
+  const adv40=computeConversion(cfg,Object.assign(JSON.parse(JSON.stringify(beInp)),{projection:Object.assign({},beInp.projection,{horizonYears:40})})).comparison.advantage;
+  const beR=computeConversion(cfg,beInp).comparison.breakEvenYears;
+  ok("B3 break-even is a real crossover (tFut 27% < blended): adv<0 at y=0, adv>0 at y=40", adv0<0 && adv40>0, "adv0="+adv0.toFixed(0)+" adv40="+adv40.toFixed(0));
+  ok("B3 break-even year is finite and >0 (not tautological)", beR!=null && beR>0 && beR<60, "be="+beR);
+
+  // ---- N2: "IRA-pays-the-tax" mode (spec §7.11) ----
+  // Same §10 scenario, two modes. tFuture raised to 0.30 so the taxable-pays case clearly wins
+  // (advantage > 0), giving a clean head-to-head where IRA-pays must come out LOWER.
+  const n2Base=JSON.parse(JSON.stringify(inp)); n2Base.projection.expectedFutureMarginalRate=0.30;
+  const n2Taxable=computeConversion(cfg, Object.assign(JSON.parse(JSON.stringify(n2Base)),
+    {conversion:Object.assign({}, n2Base.conversion, {payTaxFrom:'taxable'})}));
+  const n2Ira=computeConversion(cfg, Object.assign(JSON.parse(JSON.stringify(n2Base)),
+    {conversion:Object.assign({}, n2Base.conversion, {payTaxFrom:'ira'})}));
+  const blended=n2Taxable.costThisYear.blendedEffectiveRate;
+  // C_net reduction: Roth grows only C·(1−blended), so convertAfterTaxValue is reduced by exactly that factor.
+  const expCnet = n2Ira.conversionAmount*(1-blended);
+  ok("N2 IRA-pays reduces converted principal: C_net = C·(1−blended)", approx(n2Ira.comparison.cNet, expCnet, 0.5), "C_net="+n2Ira.comparison.cNet.toFixed(2)+" exp "+expCnet.toFixed(2));
+  ok("N2 IRA-pays: convertAfterTaxValue = C_net·(1+g)^n (Roth grows only C_net)",
+    approx(n2Ira.comparison.convertAfterTaxValue, expCnet*Math.pow(1+n2Ira.comparison.growthRate,n2Ira.comparison.horizon), 1),
+    "got "+n2Ira.comparison.convertAfterTaxValue.toFixed(0));
+  // IRA-pays "don't convert" side has NO side fund: it equals C·(1+g)^n·(1−tFut) exactly.
+  const expNoConvIra = n2Ira.conversionAmount*Math.pow(1+n2Ira.comparison.growthRate,n2Ira.comparison.horizon)*(1-n2Ira.comparison.tFuture);
+  ok("N2 IRA-pays: noConvert has NO side fund (= C·grow·(1−tFut))", approx(n2Ira.comparison.noConvertAfterTaxValue, expNoConvIra, 1), "got "+n2Ira.comparison.noConvertAfterTaxValue.toFixed(0));
+  // The headline property: paying tax from the IRA is materially worse — advantage strictly lower.
+  ok("N2 IRA-pays advantage < taxable-pays advantage (same scenario)",
+    n2Ira.comparison.advantage < n2Taxable.comparison.advantage,
+    "ira="+n2Ira.comparison.advantage.toFixed(0)+" taxable="+n2Taxable.comparison.advantage.toFixed(0));
+  // No-regression: taxable mode result is unchanged from the default (additive feature).
+  ok("N2 taxable mode unchanged (additive): matches default payTaxFrom", approx(n2Taxable.comparison.advantage, computeConversion(cfg,n2Base).comparison.advantage, 0.01), "taxable adv="+n2Taxable.comparison.advantage.toFixed(2));
+
+  // ---- F5: marginal-rate-at-bracket-floor DISPLAY fix (cosmetic; tax math unchanged) ----
+  // At exactly the MFJ 22% floor ($100,800 taxable) the LAST dollar was 12%. The display helper
+  // reports 12% (lower bracket the income tops out at); the engine's [min,max) marginalRate still
+  // reports 22% (its convention, used for headroom/state math — must NOT change). Tax owed unchanged.
+  ok("F5 displayMarginalRate at $100,800 floor (MFJ) = 12% (last dollar)", Math.abs(displayMarginalRate(toC(100800),mfj)-0.12)<1e-9, "got "+displayMarginalRate(toC(100800),mfj));
+  ok("F5 engine marginalRate convention UNCHANGED at floor = 22%", Math.abs(marginalRate(toC(100800),mfj)-0.22)<1e-9, "got "+marginalRate(toC(100800),mfj));
+  ok("F5 strictly inside 22% band still 22% ($100,801)", Math.abs(displayMarginalRate(toC(100801),mfj)-0.22)<1e-9, "got "+displayMarginalRate(toC(100801),mfj));
+  ok("F5 tax owed at the floor unchanged ($11,600 MFJ = 24,800@10% + 76,000@12%)", approx(toD(tax(toC(100800),mfj)), 24800*0.10+76000*0.12, 1), "got "+toD(tax(toC(100800),mfj)));
+
+  // ---- N3/config: MFS IRMAA now CONFIRMED ($391k boundary) and NOT pending ----
+  ok("MFS IRMAA middle boundary = 391,000 (not 394k)", cfg.irmaa.mfs.tiers[1].magiMax===391000 && cfg.irmaa.mfs.tiers[2].magiMin===391000);
+  ok("MFS IRMAA no longer gated as pending", cfg.irmaa.mfs.pending===undefined && irmaaTier(cfg,'mfs',200000).pending===false);
+  ok("MFS IRMAA surcharge dollars confirmed (mid +446.30/83.30, top +487/91)",
+    cfg.irmaa.mfs.tiers[1].partBSurchargeMonthly===446.30 && cfg.irmaa.mfs.tiers[1].partDSurchargeMonthly===83.30 &&
+    cfg.irmaa.mfs.tiers[2].partBSurchargeMonthly===487.00 && cfg.irmaa.mfs.tiers[2].partDSurchargeMonthly===91.00);
+  // Oregon 2026 standard deduction confirmed-primary; brackets still verify-flagged.
+  ok("OR 2026 standard deduction = {S 2910 / M 5820 / HoH 5820 / MFS 2910}",
+    cfg.stateConfig.OR.standardDeduction.single===2910 && cfg.stateConfig.OR.standardDeduction.mfj===5820 &&
+    cfg.stateConfig.OR.standardDeduction.hoh===5820 && cfg.stateConfig.OR.standardDeduction.mfs===2910);
+  ok("OR retirementSubtraction = 0 (Roth conversion = OR ordinary income)", cfg.stateConfig.OR.retirementSubtraction===0);
+  ok("OR brackets still verify-flagged (2026 boundaries pending DOR)", cfg.stateConfig.OR.verify===true);
+  ok("OR HoH mirrors Chart J (=mfj) and MFS mirrors Chart S (=single)",
+    cfg.stateConfig.OR.brackets.hoh[1].max===cfg.stateConfig.OR.brackets.mfj[1].max &&
+    cfg.stateConfig.OR.brackets.mfs[1].max===cfg.stateConfig.OR.brackets.single[1].max);
+
+  return {pass, fail, log, workedExample:r};
+}
+
+/* ============================================================================
+ *  WIZARD / UI LAYER
+ * ========================================================================== */
+const STATE = {
+  step:0,
+  inp:{
+    filingStatus:'mfj', userAge:62, spouseAge:62, state:'OR',
+    onMedicare:false, medicareBeneficiaries:1, acaMarketplace:false, householdSize:2,
+    income:{ordinaryIncome:95000, qualifiedDivLtcg:0, taxExemptInterest:0, socialSecurityGross:0, netInvestmentIncome:0},
+    balances:{taxDeferred:800000, roth:50000, taxableAvailableForTax:120000},
+    conversion:{mode:'fillBracket', amount:50000, targetBracketRate:0.22, payTaxFrom:'taxable'},
+    projection:{horizonYears:20, growthRate:0.05, expectedFutureMarginalRate:0.24, taxableDragRate:0.15},
+    applyObbba:false, acaBenchmarkAnnual:0
+  }
+};
+const STEP_TITLES=["Intro","About you","Income","Balances","Conversion","Cost this year","Should you?","Multi-year plan","Summary & export"];
+
+function gloss(term, tip){ return `<span class="gloss" tabindex="0" data-tip="${tip.replace(/"/g,'&quot;')}">${term}</span>`; }
+function mathBox(title, body){ return `<details class="math"><summary>show the math — ${title}</summary><pre>${body}</pre></details>`; }
+
+function renderSteps(){
+  const el=$("#steps"); el.innerHTML="";
+  STEP_TITLES.forEach((t,i)=>{
+    const p=document.createElement('span');
+    p.className="pip"+(i===STATE.step?" active":(i<STATE.step?" done":""));
+    p.textContent=i+". "+t; p.setAttribute('role','tab'); p.tabIndex=0;
+    p.onclick=()=>{STATE.step=i; render();};
+    p.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){STATE.step=i;render();}};
+    el.appendChild(p);
+  });
+}
+
+function nav(){
+  const back = STATE.step>0 ? `<button class="ghost" onclick="go(-1)">← Back</button>` : `<span></span>`;
+  const next = STATE.step<STEP_TITLES.length-1 ? `<button onclick="go(1)">Next →</button>` : `<button onclick="window.print()">🖨 Print / Save PDF</button>`;
+  return `<div class="nav">${back}${next}</div>`;
+}
+window.go=d=>{ STATE.step=Math.max(0,Math.min(STEP_TITLES.length-1, STATE.step+d)); render(); };
+
+/* generic input binding by path */
+window.setv=(path,val,isNum)=>{
+  const parts=path.split('.'); let o=STATE.inp;
+  for(let i=0;i<parts.length-1;i++) o=o[parts[i]];
+  o[parts[parts.length-1]] = isNum ? (val===''?0:Number(val)) : val;
+};
+function numField(label,path,tip){
+  const v=path.split('.').reduce((o,k)=>o[k],STATE.inp);
+  return `<div class="field"><label>${label}${tip?' '+gloss('ⓘ',tip):''}</label>
+    <input type="number" value="${v}" oninput="setv('${path}',this.value,true)"></div>`;
+}
+
+function render(){
+  renderSteps();
+  const r = computeConversion(CONFIG_2026, STATE.inp);
+  const fns={0:stepIntro,1:stepAbout,2:stepIncome,3:stepBalances,4:stepConversion,5:stepCost,6:stepShould,7:stepMulti,8:stepSummary};
+  $("#app").innerHTML = `<div class="panel">${fns[STATE.step](r)}</div>${nav()}`;
+}
+
+/* ---- Step 0 ---- */
+function stepIntro(){
+  return `<h2>What is a Roth conversion?</h2>
+  <p>A <b>Roth conversion</b> moves money from a ${gloss('tax-deferred','Traditional IRA / 401(k): contributions were pre-tax; withdrawals are taxed as ordinary income.')}
+  account (Traditional IRA / 401k) into a ${gloss('Roth','Roth accounts grow tax-free and qualified withdrawals are never taxed.')} account.
+  You pay ordinary income tax on the converted amount <em>now</em>, in exchange for tax-free growth and withdrawals later.</p>
+  <p>The core decision rule: ${gloss('convert when','Convert when the marginal rate you pay now ≤ the marginal rate you expect at future withdrawal — assuming you pay the tax from outside (taxable) funds.')}
+  the marginal rate you pay <em>now</em> is ≤ the rate you expect to pay <em>later</em>. This tool walks you through that,
+  including the secondary "gotchas" (${gloss('IRMAA','Medicare Part B/D income surcharges — a cliff based on MAGI from 2 years prior.')},
+  ${gloss('the tax torpedo','A conversion raises provisional income, which can make more of your Social Security benefits taxable.')},
+  ${gloss('NIIT','Net Investment Income Tax: 3.8% on investment income once MAGI crosses a threshold.')},
+  ${gloss('the ACA cliff','For 2026, MAGI above 400% of the Federal Poverty Level eliminates ALL ACA premium tax credit.')}) that change the true cost.</p>
+  <div class="okbox"><b>Privacy:</b> Everything runs in your browser. Nothing you type is sent anywhere or stored. You can disconnect from the internet and it still works.</div>
+  <div class="warnbox"><b>Not tax advice.</b> This is an educational estimate for tax year 2026. Confirm every number with a CPA before acting.</div>`;
+}
+
+/* ---- Step 1 ---- */
+function stepAbout(){
+  const i=STATE.inp;
+  return `<h2>About you</h2>
+  <div class="row">
+    <div class="field"><label>Filing status</label>
+      <select onchange="setv('filingStatus',this.value);render()">
+        ${['single','mfj','hoh','mfs'].map(f=>`<option value="${f}" ${i.filingStatus===f?'selected':''}>${({single:'Single',mfj:'Married filing jointly',hoh:'Head of household',mfs:'Married filing separately'})[f]}</option>`).join('')}
+      </select></div>
+    <div class="field"><label>State of residence</label>
+      <select onchange="setv('state',this.value);render()">
+        <option value="OR" ${i.state==='OR'?'selected':''}>Oregon (2026 std ded final; brackets verify 2026)</option>
+        <option value="none" ${i.state==='none'?'selected':''}>No income tax (WA/FL/TX/NV…)</option>
+      </select></div>
+  </div>
+  <div class="row">
+    ${numField('Your age','userAge')}
+    ${i.filingStatus==='mfj'?numField('Spouse age','spouseAge'):''}
+  </div>
+  <h3>Medicare & marketplace flags</h3>
+  <div class="checkrow"><input type="checkbox" id="med" ${i.onMedicare?'checked':''} onchange="setv('onMedicare',this.checked);render()"><label for="med">On Medicare (or age ≥ 63 — enables IRMAA lookahead)</label></div>
+  ${(i.onMedicare||i.userAge>=63)?`<div class="row">${numField('Medicare beneficiaries (1 or 2)','medicareBeneficiaries')}</div>`:''}
+  <div class="checkrow"><input type="checkbox" id="aca" ${i.acaMarketplace?'checked':''} onchange="setv('acaMarketplace',this.checked);render()"><label for="aca">Under 65 and buying ACA marketplace coverage (enables ACA subsidy module)</label></div>
+  ${i.acaMarketplace?`<div class="row">${numField('Household size (ACA)','householdSize')}${numField('Benchmark SLCSP annual premium ($)','acaBenchmarkAnnual','Annual premium of the second-lowest-cost Silver plan — the basis for the premium tax credit. Enter from healthcare.gov.')}</div>`:''}
+  <div class="checkrow"><input type="checkbox" id="ob" ${i.applyObbba?'checked':''} onchange="setv('applyObbba',this.checked);render()"><label for="ob">Apply OBBBA senior deduction ($6,000 per person 65+, phases out)</label></div>`;
+}
+
+/* ---- Step 2 ---- */
+function stepIncome(r){
+  const p=r.preConversion;
+  return `<h2>Income (before the conversion)</h2>
+  <p class="muted small">Enter your expected 2026 income <em>excluding</em> the conversion. Qualified dividends + long-term gains are entered separately because they ${gloss('stack','LTCG and qualified dividends sit on top of ordinary income; raising ordinary income can push them into a higher LTCG rate.')} on top of ordinary income.</p>
+  <div class="row">
+    ${numField('Ordinary income (wages, pension, interest, ord. div, STCG, planned IRA distributions)','income.ordinaryIncome')}
+    ${numField('Qualified dividends + long-term capital gains','income.qualifiedDivLtcg')}
+  </div>
+  <div class="row">
+    ${numField('Tax-exempt interest','income.taxExemptInterest')}
+    ${numField('Gross Social Security benefits','income.socialSecurityGross')}
+    ${numField('Net investment income (for NIIT)','income.netInvestmentIncome','Interest, dividends, capital gains, rents — the base NIIT applies to once MAGI crosses the threshold.')}
+  </div>
+  <h3>Pre-conversion picture</h3>
+  <table class="fig">
+    <tr><td class="lbl">Taxable Social Security (of $${fmt(STATE.inp.income.socialSecurityGross)} gross)</td><td class="num">$${fmt(p.taxableSSBefore)}</td></tr>
+    <tr><td class="lbl">Ordinary taxable income (post-deduction)</td><td class="num">$${fmt(p.taxableIncome)}</td></tr>
+    <tr><td class="lbl">AGI</td><td class="num">$${fmt(p.agi)}</td></tr>
+    <tr><td class="lbl">${gloss('MAGI','Modified AGI ≈ AGI + tax-exempt interest. Drives IRMAA, NIIT, and ACA.')}</td><td class="num">$${fmt(p.magi)}</td></tr>
+    <tr><td class="lbl">Current marginal bracket</td><td class="num">${pct(p.marginalRate)}</td></tr>
+    <tr><td class="lbl">${gloss('Bracket headroom','Dollars you can add before spilling into the next federal bracket.')}</td><td class="num">$${fmt(p.bracketHeadroom)}</td></tr>
+  </table>
+  ${mathBox('taxable income (§7.2)', `deduction = std[${STATE.inp.filingStatus}] + senior add'l = $${fmt(r._audit.deductionBefore)}
+taxableSS (IRS two-threshold worksheet, §7.5) = $${fmt(p.taxableSSBefore)}
+ordinaryTaxableBefore = max(0, ordinaryIncome + taxableSS − deduction)
+                      = max(0, ${fmt(STATE.inp.income.ordinaryIncome)} + ${fmt(p.taxableSSBefore)} − ${fmt(r._audit.deductionBefore)}) = $${fmt(p.taxableIncome)}
+marginalRate = bracket at taxable income = ${pct(p.marginalRate)}
+bracketHeadroom = bracketTop − taxableIncome = $${fmt(p.bracketHeadroom)}`)}`;
+}
+
+/* ---- Step 3 ---- */
+function stepBalances(){
+  return `<h2>Your retirement balances</h2>
+  <p class="muted small">Used for fill-the-bracket limits, the RMD projection, and the "${gloss('pay the tax from taxable','Paying conversion tax from a taxable account — not the IRA — is more efficient: more dollars stay sheltered in Roth.')}" check.</p>
+  <div class="row">
+    ${numField('Tax-deferred balance (conversion source)','balances.taxDeferred')}
+    ${numField('Current Roth balance','balances.roth')}
+    ${numField('Taxable funds available to pay the tax','balances.taxableAvailableForTax')}
+  </div>`;
+}
+
+/* ---- Step 4 ---- */
+function stepConversion(r){
+  const i=STATE.inp;
+  const modeAmount = i.conversion.mode==='amount';
+  return `<h2>How much to convert?</h2>
+  <div class="checkrow"><input type="radio" name="mode" id="ma" ${modeAmount?'checked':''} onchange="setv('conversion.mode','amount');render()"><label for="ma">Enter a specific amount</label></div>
+  <div class="checkrow"><input type="radio" name="mode" id="mb" ${!modeAmount?'checked':''} onchange="setv('conversion.mode','fillBracket');render()"><label for="mb">${gloss('Fill a bracket','Convert exactly enough to reach the top of a target federal bracket — no more, to avoid spilling into the next rate.')}</label></div>
+  ${modeAmount
+    ? `<div class="row">${numField('Conversion amount','conversion.amount')}</div>`
+    : `<div class="row"><div class="field"><label>Target bracket (fill to top of)</label>
+        <select onchange="setv('conversion.targetBracketRate',Number(this.value),true);render()">
+          ${[0.10,0.12,0.22,0.24,0.32,0.35].map(rt=>`<option value="${rt}" ${Math.abs(i.conversion.targetBracketRate-rt)<1e-9?'selected':''}>${(rt*100)}% bracket</option>`).join('')}
+        </select></div></div>`}
+  <h3>Resulting conversion</h3>
+  <div class="kpi">
+    <div class="card"><div class="k">Conversion amount</div><div class="v">$${fmt(r.conversionAmount)}</div></div>
+    <div class="card"><div class="k">Running marginal rate (after)</div><div class="v">${pct(displayMarginalRate(toC(r.ordinaryTaxableAfter),CONFIG_2026.federalOrdinaryBrackets[i.filingStatus]))}</div></div>
+    <div class="card"><div class="k">Ordinary taxable income after</div><div class="v">$${fmt(r.ordinaryTaxableAfter)}</div></div>
+  </div>
+  ${r.conversionAmount>STATE.inp.balances.taxDeferred?'':''}
+  ${mathBox('conversion sizing (§7.3)', i.conversion.mode==='fillBracket'
+    ? `C = max(0, topOfBracket(${(i.conversion.targetBracketRate*100)}%) − taxableIncomeBefore)
+  = max(0, $${fmt(toD(topOfBracketC(i.conversion.targetBracketRate,CONFIG_2026.federalOrdinaryBrackets[i.filingStatus])))} − $${fmt(r.preConversion.taxableIncome)})
+  = $${fmt(r.conversionAmount)}`
+    : `C = entered amount = $${fmt(r.conversionAmount)} (capped at tax-deferred balance)`)}`;
+}
+
+/* ---- Step 5 ---- */
+function stepCost(r){
+  const c=r.costThisYear;
+  const warn = r.warnings.map(w=>`<div class="warnbox ${w.indexOf('CLIFF')>=0?'cliff':''}">${w}</div>`).join('');
+  return `<h2>Cost of converting this year</h2>
+  ${warn}
+  <table class="fig">
+    <tr><td class="lbl">Federal incremental income tax</td><td class="num cost">$${fmt(c.federalIncrementalTax)}</td></tr>
+    <tr><td class="lbl">&nbsp;&nbsp;of which Social Security ${gloss('tax torpedo','Extra federal tax because the conversion made more of your SS benefits taxable.')}</td><td class="num cost">$${fmt(c.ssTaxationExtraTax)}</td></tr>
+    <tr><td class="lbl">State incremental tax (${CONFIG_2026.stateConfig[STATE.inp.state].name}, marg. ${pct(c.stateMarginal)})</td><td class="num cost">$${fmt(c.stateIncrementalTax)}</td></tr>
+    <tr><td class="lbl">${gloss('LTCG stacking','Conversion pushed some long-term gains/qualified dividends into a higher LTCG rate.')} extra tax</td><td class="num cost">$${fmt(c.ltcgStackingExtraTax)}</td></tr>
+    <tr><td class="lbl">NIIT (3.8%) extra tax</td><td class="num cost">$${fmt(c.niitExtraTax)}</td></tr>
+    <tr><td class="lbl">IRMAA annual surcharge delta</td><td class="num cost">$${fmt(c.irmaaAnnualSurchargeDelta)}</td></tr>
+    <tr><td class="lbl">ACA subsidy change ${c.acaSubsidyDelta<0?'(lost — a cost)':''}</td><td class="num ${c.acaSubsidyDelta<0?'cost':''}">$${fmt(-c.acaSubsidyDelta)}</td></tr>
+    <tr class="total"><td>Total incremental cost</td><td class="num cost">$${fmt(c.totalIncrementalCost)}</td></tr>
+    <tr class="total"><td>${gloss('Blended effective marginal rate','Total cost ÷ conversion amount — the TRUE marginal rate including all the gotchas, not just the bracket.')}</td><td class="num">${c.blendedEffectiveRate===null?'N/A (C=0)':pct(c.blendedEffectiveRate)}</td></tr>
+  </table>
+  ${r.irmaaInfo&&r.irmaaInfo.distToNext!==Infinity?`<p class="small muted">After conversion, MAGI ($${fmt(r.irmaaInfo.magiAfter)}) is $${fmt(r.irmaaInfo.distToNext)} below the next IRMAA boundary.</p>`:''}
+  ${r.acaInfo?`<p class="small muted">ACA: MAGI moved from ${(r.acaInfo.pctBefore*100).toFixed(0)}% to ${(r.acaInfo.pctAfter*100).toFixed(0)}% of FPL.</p>`:''}
+  ${mathBox('total cost & blended rate (§7.10)', `totalIncrementalCost = fed + state + ltcgStacking + ssTorpedo + niit + irmaa − acaSubsidyDelta
+  = ${fmt(c.federalIncrementalTax)} + ${fmt(c.stateIncrementalTax)} + ${fmt(c.ltcgStackingExtraTax)} + ${fmt(c.niitExtraTax)} + ${fmt(c.irmaaAnnualSurchargeDelta)} − (${fmt(c.acaSubsidyDelta)})
+  = $${fmt(c.totalIncrementalCost)}
+blendedEffectiveRate = totalIncrementalCost / C = ${fmt(c.totalIncrementalCost)} / ${fmt(r.conversionAmount)} = ${c.blendedEffectiveRate===null?'N/A':pct(c.blendedEffectiveRate)}
+(ssTorpedo is a component already inside the federal figure, shown separately for transparency)`)}`;
+}
+
+/* ---- Step 6 ---- */
+// C1: re-run the comparison at a band of future marginal rates so the verdict is never a
+// naked point estimate. Returns the advantage sign at each rate in the band.
+function sensitivityBand(baseInp, centerRate){
+  const offsets=[-0.05,-0.025,0,0.025,0.05];
+  return offsets.map(off=>{
+    const tf=Math.max(0, Math.min(0.50, centerRate+off));
+    const i2=JSON.parse(JSON.stringify(baseInp));
+    i2.projection.expectedFutureMarginalRate=tf;
+    const rr=computeConversion(CONFIG_2026, i2);
+    return {tf, off, advantage:rr.comparison?rr.comparison.advantage:null, wins:rr.comparison?rr.comparison.advantage>=0:null};
+  });
+}
+function stepShould(r){
+  const i=STATE.inp; const cm=r.comparison;
+  let band=null, flips=false;
+  if(cm){
+    band=sensitivityBand(i, cm.tFuture);
+    const wins=band.map(b=>b.wins);
+    flips = wins.some(w=>w) && wins.some(w=>!w); // verdict changes inside the band
+  }
+  const payIra = i.conversion.payTaxFrom==='ira';
+  return `<h2>Should you convert?</h2>
+  <p class="muted small">Compares after-tax value in ${i.projection.horizonYears} years. ${payIra
+    ? `You have chosen to ${gloss('pay the tax from the IRA','The less-efficient case: the conversion tax comes out of the converted dollars themselves, so fewer dollars reach the Roth.')} — the less efficient case.`
+    : `Assumes you ${gloss('pay the tax from taxable funds','The efficient case: paying tax externally is equivalent to sheltering that tax money in Roth.')}.`}</p>
+  <h3>Where does the conversion tax come from?</h3>
+  <div class="checkrow"><input type="radio" name="paytax" id="pt-tax" ${!payIra?'checked':''} onchange="setv('conversion.payTaxFrom','taxable');render()"><label for="pt-tax"><b>Taxable (outside) funds</b> — efficient. The full conversion lands in the Roth.</label></div>
+  <div class="checkrow"><input type="radio" name="paytax" id="pt-ira" ${payIra?'checked':''} onchange="setv('conversion.payTaxFrom','ira');render()"><label for="pt-ira"><b>The IRA / converted funds</b> — materially less efficient. Tax is withheld from the conversion, so only the net reaches the Roth.</label></div>
+  ${payIra?`<div class="warnbox cliff"><b>⚠️ Lower efficiency.</b> Paying the tax from the IRA shrinks the amount that reaches the Roth to <b>C<sub>net</sub> = C·(1−blended) = $${cm?fmt(cm.cNet):'—'}</b> (vs the full $${fmt(r.conversionAmount)} if you pay from taxable funds). Fewer tax-free dollars compound, and there are no outside dollars left in a side fund — so converting wins by less (or loses) compared with the taxable-pays case. Prefer paying from taxable funds whenever you can.</div>`:''}
+  <div class="row">
+    ${numField('Horizon (years)','projection.horizonYears')}
+    ${numField('Annual growth rate (e.g. 0.05)','projection.growthRate')}
+    ${numField('Expected FUTURE marginal rate at withdrawal — ALL-IN (e.g. 0.24)','projection.expectedFutureMarginalRate','Enter your expected future ALL-IN marginal rate: federal + future STATE income tax combined. The cost side already includes your current state tax, so this future rate must include state too or the comparison is apples-to-oranges. Convert when this ≥ your blended rate now. Drivers that raise it: a surviving spouse moving from MFJ to single brackets, or larger future RMDs.')}
+  </div>
+  <div class="row">
+    ${numField('Annual tax drag on taxable growth (e.g. 0.15)','projection.taxableDragRate','The fraction of each year\'s taxable-account return lost to tax (your LTCG + NIIT + state rate on annual gains). The no-convert side fund (the tax dollars you would have paid) sits in a TAXABLE account, so it grows at an after-tax rate g·(1−drag), not the tax-free Roth rate. Only applies to the taxable-pays case; if you pay tax from the IRA there is no side fund. 0.15 ≈ 15% LTCG/state drag is a reasonable default.')}
+  </div>
+  ${cm?`<div class="kpi">
+    <div class="card"><div class="k">Convert — after-tax value${cm.payTaxFrom==='ira'?' (Roth grows C<sub>net</sub>)':''}</div><div class="v">$${fmt(cm.convertAfterTaxValue)}</div></div>
+    <div class="card"><div class="k">Don't convert — after-tax value${cm.payTaxFrom==='ira'?' (no side fund)':''}</div><div class="v">$${fmt(cm.noConvertAfterTaxValue)}</div></div>
+    <div class="card"><div class="k">Advantage of converting</div><div class="v ${cm.advantage>=0?'save':'cost'}">$${fmt(cm.advantage)}</div></div>
+    <div class="card"><div class="k">${gloss('Break-even', cm.payTaxFrom==='ira'
+      ? 'The year converting pulls ahead. Paying the tax from the IRA leaves no outside side fund, so the comparison is purely your future marginal rate vs. your blended rate now — there is no crossover to wait for. Break-even is year 0 when the future rate is at or above the blended rate, and never otherwise.'
+      : 'The year the tax-free Roth growth overtakes not-converting. The side fund (the tax dollars you would have paid) grows at an after-tax rate, so the Roth pulls ahead over time — this is a real crossover year, not just the advantage sign.')}</div><div class="v">${cm.breakEvenYears==null?'>60 yrs':cm.breakEvenYears+' yrs'}</div></div>
+  </div>
+  <div class="${cm.advantage>=0?'okbox':'warnbox'}">
+    ${cm.advantage>=0
+      ? `Converting wins by $${fmt(cm.advantage)} over ${i.projection.horizonYears} years. Your blended rate now (${pct(r.costThisYear.blendedEffectiveRate)}) is ${r.costThisYear.blendedEffectiveRate<=cm.tFuture?'at or below':'above'} your expected future rate (${pct(cm.tFuture)}).`
+      : `Not converting wins here — your blended rate now (${pct(r.costThisYear.blendedEffectiveRate)}) exceeds your expected future rate (${pct(cm.tFuture)}). The decision rule says wait.`}
+  </div>
+  ${band?`<h3>How sensitive is this? (verdict vs. your future-rate guess)</h3>
+  <p class="muted small">The whole call pivots on a single number you guessed — your future marginal rate. Here is the verdict across ±5 points of that guess:</p>
+  <table class="fig">
+    <tr><td class="lbl">Future marginal rate</td>${band.map(b=>`<td class="num lbl">${(b.tf*100).toFixed(1)}%${b.off===0?' *':''}</td>`).join('')}</tr>
+    <tr><td class="lbl">Advantage of converting</td>${band.map(b=>`<td class="num ${b.wins?'save':'cost'}">$${fmt(b.advantage)}</td>`).join('')}</tr>
+    <tr><td class="lbl">Verdict</td>${band.map(b=>`<td class="num ${b.wins?'save':'cost'}">${b.wins?'convert':'wait'}</td>`).join('')}</tr>
+  </table>
+  <div class="${flips?'warnbox cliff':'warnbox'} small">
+    ${flips
+      ? `<b>Close call — your answer depends on the guess.</b> Inside a ±5-point band the verdict FLIPS between convert and wait. Don't treat the headline number as settled; the decision hinges on a future rate no one can know precisely.`
+      : `Across the ±5-point band the verdict is stable (${band[0].wins?'convert':'wait'} throughout) — but it is still an estimate built on a guessed future rate.`}
+    <span class="muted"> (* = your entered rate.)</span>
+  </div>`:''}
+  ${r.rmd?`<p class="small">Future RMD reduction from this conversion: <b class="save">$${fmt(r.rmd.rmdReduction)}/yr</b> at age ${r.rmd.startAge} (first RMD goes from $${fmt(r.rmd.firstRmdNoConvert)} to $${fmt(r.rmd.firstRmdWithPlan)}).</p>`:''}
+  ${mathBox('after-tax comparison (§7.11)', cm.payTaxFrom==='ira'
+    ? `MODE: tax paid FROM the IRA (less efficient). Tax reduces the converted principal first.
+C_net = C·(1−blended) = ${fmt(r.conversionAmount)}·(1−${pct(cm.blendedRate)}) = $${fmt(cm.cNet)}
+convertAfterTaxValue   = C_net·(1+g)^n = ${fmt(cm.cNet)}·(1+${i.projection.growthRate})^${i.projection.horizonYears} = $${fmt(cm.convertAfterTaxValue)}
+                       (the Roth grows only C_net — the tax never entered the Roth.)
+noConvertAfterTaxValue = C·(1+g)^n·(1−tFuture) = $${fmt(cm.noConvertAfterTaxValue)}
+                       (NO side fund: no outside dollars were spent on tax — the tax came out of the
+                        converted amount itself. The "don't convert" side is just the IRA grown pre-tax
+                        and taxed at ${pct(cm.tFuture)} at withdrawal.)
+advantage = $${fmt(cm.advantage)}   break-even = ${cm.breakEvenYears==null?'>60':cm.breakEvenYears} yrs
+NOTE: this advantage is lower than the taxable-pays case for the same scenario — paying tax from
+the IRA forfeits the compounding of the tax dollars. Pay from taxable funds whenever possible.`
+    : `MODE: tax paid from TAXABLE (outside) funds (efficient). Full C lands in the Roth.
+convertAfterTaxValue   = C·(1+g)^n = ${fmt(r.conversionAmount)}·(1+${i.projection.growthRate})^${i.projection.horizonYears} = $${fmt(cm.convertAfterTaxValue)}
+noConvertAfterTaxValue = C·(1+g)^n·(1−tFuture) + (C·blendedRate)·(1+g_afterTax)^n
+                       g_afterTax = g·(1−drag) = ${i.projection.growthRate}·(1−${cm.taxableDragRate}) = ${cm.gAfterTax.toFixed(4)}
+                       (IRA grows pre-tax then taxed at ${pct(cm.tFuture)}; the side fund = the tax you'd
+                        have paid, but it sits in a TAXABLE account so it grows at the slower after-tax
+                        rate g_afterTax — NOT the tax-free Roth rate. This asymmetry is what creates a
+                        real break-even year: tax-free Roth growth eventually overtakes the taxed side fund.)
+                       = $${fmt(cm.noConvertAfterTaxValue)}
+advantage = $${fmt(cm.advantage)}   break-even = ${cm.breakEvenYears==null?'>60':cm.breakEvenYears} yrs`)}`
+  :`<div class="warnbox">Enter an expected future marginal rate to see the comparison.</div>`}`;
+}
+
+/* ---- Step 7 ---- */
+function stepMulti(){
+  const i=STATE.inp;
+  // reuse single-year engine per projected year, filling to target bracket each year
+  const years=i.projection.horizonYears, g=i.projection.growthRate;
+  let bal=i.balances.taxDeferred, roth=i.balances.roth, cumTax=0, rows=[];
+  const targetRate = i.conversion.mode==='fillBracket'?i.conversion.targetBracketRate:0.22;
+  for(let y=1;y<=Math.min(years,15);y++){
+    const yi=JSON.parse(JSON.stringify(i));
+    yi.balances.taxDeferred=bal; yi.conversion={mode:'fillBracket',amount:null,targetBracketRate:targetRate};
+    yi.userAge=i.userAge+y-1; if(yi.spouseAge!=null) yi.spouseAge=i.spouseAge+y-1;
+    const rr=computeConversion(CONFIG_2026,yi);
+    const C=Math.min(rr.conversionAmount,bal);
+    cumTax+=rr.costThisYear.totalIncrementalCost;
+    bal=clamp0(bal-C)*(1+g); roth=(roth+C)*(1+g);
+    rows.push(`<tr><td class="num">${i.userAge+y-1}</td><td class="num">$${fmt(C)}</td><td class="num">$${fmt(rr.costThisYear.totalIncrementalCost)}</td><td class="num">$${fmt(cumTax)}</td><td class="num">$${fmt(bal)}</td><td class="num">$${fmt(roth)}</td></tr>`);
+  }
+  // RMD with vs without plan at start age
+  const factor=CONFIG_2026.rmd.uniformLifetime[CONFIG_2026.rmd.startAge];
+  const yearsTo=clamp0(CONFIG_2026.rmd.startAge-i.userAge);
+  const balNo=i.balances.taxDeferred*Math.pow(1+g,yearsTo);
+  return `<h2>Multi-year conversion plan</h2>
+  <p class="muted small">Projects filling the <b>${(targetRate*100)}% bracket</b> each year, reusing the single-year engine (spec §13). Growth ${(g*100)}%/yr. Capped at 15 displayed years.</p>
+  <table class="fig">
+    <tr><td class="lbl">Age</td><td class="lbl num">Converted</td><td class="lbl num">Tax this yr</td><td class="lbl num">Cumulative tax</td><td class="lbl num">Tax-deferred left</td><td class="lbl num">Roth</td></tr>
+    ${rows.join('')}
+  </table>
+  <p class="small">Projected first RMD at age ${CONFIG_2026.rmd.startAge}: <b>without plan</b> ≈ $${fmt(balNo/factor)} vs <b>with plan</b> ≈ $${fmt(bal/factor)} (factor ${factor}). Drawing the tax-deferred balance down now shrinks future forced ${gloss('RMDs','Required Minimum Distributions — forced taxable withdrawals starting at age 73 that can spike your bracket and trigger IRMAA.')}.</p>
+  <div class="warnbox small"><b>Illustration, not a plan — and it freezes 2026 tax law.</b> This projection holds 2026 brackets, deductions, and thresholds <b>flat and unindexed</b>, and assumes <b>current law persists unchanged</b> for the whole horizon (no TCJA-successor sunset, no statutory change to IRMAA/NIIT/SS, no inflation indexing). Direction of the bias: real brackets rise with inflation each year, so a flat nominal "fill the ${(targetRate*100)}% bracket" <b>understates</b> how much you could convert at that rate in later years; and if brackets revert <b>upward</b> in a future year, converting cheaply now looks even better than shown here. It also grows a static balance with no future contributions/withdrawals. Treat the rows as an educational illustration — not a 15-year plan — and <b>verify current tax law</b> before acting on any multi-year figure.</div>`;
+}
+
+/* ---- Step 8 ---- */
+function stepSummary(r){
+  const i=STATE.inp, c=r.costThisYear;
+  const verb = (r.comparison&&r.comparison.advantage>=0)?'favors converting':'favors waiting';
+  return `<h2>Summary</h2>
+  <p>For a <b>$${fmt(r.conversionAmount)}</b> conversion (${i.filingStatus.toUpperCase()}, age ${i.userAge}, ${CONFIG_2026.stateConfig[i.state].name}), the estimated <b>total cost is $${fmt(c.totalIncrementalCost)}</b> — a <b>blended effective marginal rate of ${c.blendedEffectiveRate===null?'N/A':pct(c.blendedEffectiveRate)}</b>.
+  ${r.comparison?`Over ${i.projection.horizonYears} years at ${(i.projection.growthRate*100)}% growth, paying the tax from <b>${r.comparison.payTaxFrom==='ira'?'the IRA (less efficient)':'taxable funds (efficient)'}</b>, the math <b>${verb}</b> (advantage $${fmt(r.comparison.advantage)}).`:''}</p>
+  ${r.comparison&&r.comparison.payTaxFrom==='ira'?`<div class="warnbox cliff"><b>Lower-efficiency mode.</b> Tax is paid from the IRA, so only C<sub>net</sub> = $${fmt(r.comparison.cNet)} of the $${fmt(r.conversionAmount)} conversion reaches the Roth. The advantage shown is lower than it would be paying from taxable funds — prefer paying the tax from outside funds when possible.</div>`:''}
+  <h3>Cost breakdown</h3>
+  <table class="fig">
+    <tr><td class="lbl">Federal</td><td class="num">$${fmt(c.federalIncrementalTax)}</td></tr>
+    <tr><td class="lbl">State</td><td class="num">$${fmt(c.stateIncrementalTax)}</td></tr>
+    <tr><td class="lbl">LTCG stacking</td><td class="num">$${fmt(c.ltcgStackingExtraTax)}</td></tr>
+    <tr><td class="lbl">SS torpedo (within federal)</td><td class="num">$${fmt(c.ssTaxationExtraTax)}</td></tr>
+    <tr><td class="lbl">NIIT</td><td class="num">$${fmt(c.niitExtraTax)}</td></tr>
+    <tr><td class="lbl">IRMAA</td><td class="num">$${fmt(c.irmaaAnnualSurchargeDelta)}</td></tr>
+    <tr><td class="lbl">ACA subsidy lost</td><td class="num">$${fmt(-c.acaSubsidyDelta)}</td></tr>
+    <tr class="total"><td>Total</td><td class="num">$${fmt(c.totalIncrementalCost)}</td></tr>
+  </table>
+  ${r.warnings.length?`<h3>Warnings</h3>${r.warnings.map(w=>`<div class="warnbox ${w.indexOf('CLIFF')>=0?'cliff':''}">${w}</div>`).join('')}`:''}
+  <h3>Assumptions</h3>
+  <ul class="small muted">
+    <li>Tax year 2026 config (IRS Rev. Proc. 2025-32/25, CMS 2026 IRMAA, 2025 HHS FPL, statutory NIIT/SS, SECURE 2.0 RMD).</li>
+    <li>Standard deduction. Conversion tax paid from <b>${r.comparison&&r.comparison.payTaxFrom==='ira'?'the IRA / converted funds (less efficient — only C·(1−blended) reaches the Roth)':'taxable funds (efficient case)'}</b>.</li>
+    <li>${i.state==='OR'?'Oregon: 2026 standard deduction is final (DOR 150-206-436); bracket boundaries are 2025 placeholders pending DOR\'s 2026 indexed OR-40 charts (expected ~Dec 2025/Jan 2026). Rates and the $125k/$250k top boundaries are statutory/final.':'No state income tax.'}</li>
+    <li>Multi-year projection freezes 2026 brackets and current law for the full horizon (no inflation indexing, no sunset) — understates future bracket creep; treat as illustration, not a plan.</li>
+    <li>"Should you convert?": in the taxable-pays case the no-convert side fund grows at an after-tax rate g·(1−drag); in the IRA-pays case there is no side fund and the Roth grows only C·(1−blended). The expected future marginal rate is entered ALL-IN (federal + future state).</li>
+  </ul>
+  <div class="warnbox"><b>Not tax advice.</b> Estimate only — verify with a CPA before filing.</div>
+  <div class="nav no-print"><button onclick="window.print()">🖨 Print / Save as PDF</button><button class="ghost" onclick="STATE.step=0;render()">↺ Start over</button></div>
+  <hr>
+  <details class="math no-print"><summary>Developer self-tests (engine verification, spec §12)</summary>
+    <div id="testpanel"><button class="sm" onclick="renderTests()">Run self-tests</button><pre id="testout" class="small"></pre></div>
+  </details>`;
+}
+
+window.renderTests=()=>{
+  const t=runSelfTests();
+  const head=`Self-tests: ${t.pass} passed, ${t.fail} failed.  §10 worked example: blended=${pct(t.workedExample.costThisYear.blendedEffectiveRate)}, C=$${fmt(t.workedExample.conversionAmount)}\n`+
+    `Worked-example assertion: ${t.fail===0?'PASS':'see failures below'}\n\n`;
+  const body=t.log.map(l=>l.startsWith('PASS')?`<span class="pass">${l}</span>`:`<span class="fail">${l}</span>`).join('\n');
+  $("#testout").innerHTML=head+body;
+};
+
+render();
+// auto-run tests once on load to console for sanity
+try{ const t=runSelfTests(); console.log(`[self-tests] ${t.pass} passed, ${t.fail} failed`); if(t.fail) console.warn(t.log.filter(l=>l.startsWith('FAIL'))); }catch(e){ console.error(e); }
+</script>
+</body>
+</html>
